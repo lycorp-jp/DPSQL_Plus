@@ -1,0 +1,246 @@
+import os
+
+import duckdb
+import pandas as pd
+import polars as pl
+import pytest
+from utils import create_test_cases
+
+from dpsql.backend import DuckDBBackend
+from dpsql.dp_params import DPParams
+
+
+@pytest.fixture(scope="function")
+def conn():
+    conn = duckdb.connect(":memory:")
+    yield conn
+    conn.close()
+
+
+# Get test cases and IDs from shared utility
+TEST_CASES, TEST_IDS = create_test_cases("duckdb")
+
+
+@pytest.mark.parametrize(
+    "agg_type,column_name,df,group_by,clipping_threshold,expected_result",
+    TEST_CASES,
+    ids=TEST_IDS,
+)
+def test_apply_aggregation(
+    conn, agg_type, column_name, df, group_by, clipping_threshold, expected_result
+):
+    """Test apply_aggregation method for various aggregation types."""
+    backend = DuckDBBackend(conn)
+
+    result = backend.apply_aggregation(
+        agg_type=agg_type,
+        column_name=column_name,
+        df=df,
+        group_by=group_by,
+        clipping_threshold=clipping_threshold,
+    )
+
+    # Compare the result with expected result
+    pd.testing.assert_series_equal(
+        result.sort_index(),
+        expected_result.sort_index(),
+        check_names=False,
+        check_dtype=False,
+    )
+
+
+@pytest.mark.parametrize(
+    "data,expected_count",
+    [
+        (
+            pl.DataFrame(
+                {
+                    "id": [1, 2, 3, 4],
+                    "uid": ["uid1", "uid2", "uid3", "uid1"],
+                    "value": [10, 20, 30, 20],
+                }
+            ),
+            3,
+        ),
+        (
+            pl.DataFrame(
+                {
+                    "id": [],
+                    "uid": [],
+                    "value": [],
+                }
+            ),
+            0,
+        ),
+    ],
+    ids=["normal case", "empty case"],
+)
+def test_contribution_bound(conn, data, expected_count):
+    backend = DuckDBBackend(conn)
+    params = DPParams(
+        contribution_bound=1,
+        sigma_for_thresholding=0,
+        tau=1.0,
+        sigmas=[0],
+        clipping_thresholds=[None],
+    )
+
+    filtered_df = backend.contribution_bound(data, "uid", params)
+    assert len(filtered_df) == expected_count
+
+
+@pytest.mark.parametrize(
+    "data,group_by,selected_keys,expected_count",
+    [
+        (
+            pl.DataFrame(
+                {
+                    "id": [1, 2, 3, 4],
+                    "uid": ["uid1", "uid2", "uid3", "uid1"],
+                    "attribute": ["a", "b", "a", "a"],
+                    "value": [10, 20, 30, 20],
+                }
+            ),
+            ["attribute"],
+            [("a",)],
+            3,
+        ),
+        (
+            pl.DataFrame(
+                {
+                    "id": [1, 2, 3, 4],
+                    "uid": ["uid1", "uid2", "uid3", "uid1"],
+                    "attribute1": ["a", "a", "a", "b"],
+                    "attribute2": ["x", "y", "x", "y"],
+                }
+            ),
+            ["attribute1", "attribute2"],
+            [("a", "x")],
+            2,
+        ),
+        (
+            pl.DataFrame(
+                {
+                    "id": [1, 2, 3, 4],
+                    "uid": ["uid1", "uid2", "uid3", "uid1"],
+                    "attribute": ["a", "b", "a", "a"],
+                    "value": [10, 20, 30, 20],
+                }
+            ),
+            ["attribute"],
+            [],
+            0,
+        ),
+    ],
+    ids=[
+        "single column filtering",
+        "multi column filtering",
+        "empty selected_keys case",
+    ],
+)
+def test_filter_by_selected_keys(conn, data, group_by, selected_keys, expected_count):
+    backend = DuckDBBackend(conn)
+    filtered_df = backend.filter_by_selected_keys(data, group_by, selected_keys)
+    assert len(filtered_df) == expected_count
+
+
+def test_get_column_name(conn):
+    conn.execute("CREATE TABLE table1 (column1 INT, column2 INT)")
+    conn.execute("CREATE TABLE table2 (columnA INT, columnB INT)")
+
+    backend = DuckDBBackend(conn)
+
+    table_name = backend.get_table_name()
+    assert table_name == ["table1", "table2"]
+
+    for table in table_name:
+        column_name = backend.get_column_name(table)
+        if table == "table1":
+            assert column_name == ["column1", "column2"]
+        elif table == "table2":
+            assert column_name == ["columnA", "columnB"]
+
+
+def test_create_temporary_table_with_inmemory(conn):
+    backend = DuckDBBackend(conn)
+    df = pd.DataFrame(
+        [
+            (1, "uid1", "a", 10),
+            (2, "uid2", "b", 20),
+            (3, "uid3", "a", 30),
+            (4, "uid1", "a", 20),
+        ],
+        columns=["id", "uid", "attribute", "value"],
+    )
+
+    backend.create_temporary_table(df, "test_table", False)
+
+    assert "test_table" in backend.get_table_name()
+
+    assert backend.get_column_name("test_table") == [
+        "id",
+        "uid",
+        "attribute",
+        "value",
+    ]
+
+    backend.create_temporary_table(df, "test_table2", True)
+
+    assert "test_table2" in backend.get_table_name()
+
+    assert backend.get_column_name("test_table2") == [
+        "index",
+        "id",
+        "uid",
+        "attribute",
+        "value",
+    ]
+
+
+def test_create_temporary_table_with_file():
+    conn = duckdb.connect("test.db")
+    backend = DuckDBBackend(conn)
+
+    df = pd.DataFrame(
+        [
+            (1, "uid1", "a", 10),
+            (2, "uid2", "b", 20),
+            (3, "uid3", "a", 30),
+            (4, "uid1", "a", 20),
+        ],
+        columns=["id", "uid", "attribute", "value"],
+    )
+
+    backend.create_temporary_table(df, "test_table", False)
+
+    assert "test_table" in backend.get_table_name()
+
+    assert backend.get_column_name("test_table") == [
+        "id",
+        "uid",
+        "attribute",
+        "value",
+    ]
+
+    backend.create_temporary_table(df, "test_table2", True)
+
+    assert "test_table2" in backend.get_table_name()
+
+    assert backend.get_column_name("test_table2") == [
+        "index",
+        "id",
+        "uid",
+        "attribute",
+        "value",
+    ]
+
+    conn.close()
+
+    conn = duckdb.connect("test.db")
+    backend = DuckDBBackend(conn)
+
+    assert "test_table" not in backend.get_table_name()
+    assert "test_table2" not in backend.get_table_name()
+
+    conn.close()
+    os.remove("test.db")
