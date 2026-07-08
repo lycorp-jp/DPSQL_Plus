@@ -1,0 +1,386 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dpsql.backend.sqlite_backend &mdash; DPSQL+  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs"></script>
+      <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
+      <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs";import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs";mermaid.registerLayoutLoaders(elkLayouts);mermaid.initialize({startOnLoad:false});</script>
+      <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+      <script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs";
+window.addEventListener("load", () => mermaid.run());
+</script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            DPSQL+
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../accountant.html">Accountant</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../backend.html">Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../engine.html">Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../validator.html">Validator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dpparams.html">DPParams</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">DPSQL+</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">dpsql.backend.sqlite_backend</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for dpsql.backend.sqlite_backend</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..aggregation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Aggregation</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..dp_params</span><span class="w"> </span><span class="kn">import</span> <span class="n">DPParams</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">AggregationError</span><span class="p">,</span> <span class="n">ExecutionBackendError</span><span class="p">,</span> <span class="n">UnsupportedBackendError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">safely_get_threshold</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.sql_backend</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataFrameLike</span><span class="p">,</span> <span class="n">SQLBackend</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_quote_pragma_literal</span><span class="p">(</span><span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">escaped_identifier</span> <span class="o">=</span> <span class="n">identifier</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;&#39;&#39;&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">escaped_identifier</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+
+
+<div class="viewcode-block" id="SQLiteBackend">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLiteBackend">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SQLiteBackend</span><span class="p">(</span><span class="n">SQLBackend</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Backend for executing SQLite queries with differential privacy mechanisms.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        conn (sqlite3.Connection): A live SQLite connection object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">conn</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;SQLiteBackend initialized with connection=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="SQLiteBackend.create_inner_df">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLiteBackend.create_inner_df">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_inner_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inner_sql</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;SQLite create_inner_df: sql_head=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">inner_sql</span><span class="p">[:</span><span class="mi">160</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span><span class="n">inner_sql</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SQLiteBackend.contribution_bound">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLiteBackend.contribution_bound">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">contribution_bound</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">inner_df</span><span class="p">:</span> <span class="n">DataFrameLike</span><span class="p">,</span> <span class="n">privacy_unit</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">DPParams</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;SQLite contribution_bound: privacy_unit=</span><span class="si">%s</span><span class="s2">, bound=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">privacy_unit</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">.</span><span class="n">contribution_bound</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inner_df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">UnsupportedBackendError</span><span class="p">(</span>
+                <span class="s2">&quot;Expected pandas DataFrame in SQLite backend&quot;</span><span class="p">,</span>
+                <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;actual_type&quot;</span><span class="p">:</span> <span class="nb">type</span><span class="p">(</span><span class="n">inner_df</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">},</span>
+                <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Provide a pandas.DataFrame&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Randomly shuffle rows within each privacy unit</span>
+        <span class="c1"># and keep only up to contribution_bound rows</span>
+        <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">()</span>
+        <span class="n">randomized</span> <span class="o">=</span> <span class="n">inner_df</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">_shuffle_rand</span><span class="o">=</span><span class="n">rng</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inner_df</span><span class="p">)))</span>
+        <span class="n">randomized</span> <span class="o">=</span> <span class="n">randomized</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="n">privacy_unit</span><span class="p">,</span> <span class="s2">&quot;_shuffle_rand&quot;</span><span class="p">])</span>
+        <span class="n">grouped</span> <span class="o">=</span> <span class="n">randomized</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">privacy_unit</span><span class="p">,</span> <span class="n">dropna</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">group_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">randomized</span><span class="p">[</span><span class="n">grouped</span><span class="o">.</span><span class="n">cumcount</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">params</span><span class="o">.</span><span class="n">contribution_bound</span><span class="p">]</span>
+        <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">filtered_df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;_shuffle_rand&quot;</span><span class="p">])</span>
+        <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">filtered_df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;SQLite contribution_bound: filtered_rows=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">filtered_df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">filtered_df</span></div>
+
+
+<div class="viewcode-block" id="SQLiteBackend.apply_aggregation">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLiteBackend.apply_aggregation">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">apply_aggregation</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">agg_type</span><span class="p">:</span> <span class="n">Aggregation</span><span class="p">,</span>
+        <span class="n">column_name</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">df</span><span class="p">:</span> <span class="n">DataFrameLike</span><span class="p">,</span>
+        <span class="n">group_by</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">clipping_threshold</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;SQLite apply_aggregation: agg=</span><span class="si">%s</span><span class="s2"> columns=</span><span class="si">%s</span><span class="s2"> group_by=</span><span class="si">%s</span><span class="s2"> clip=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="n">agg_type</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">agg_type</span><span class="p">)),</span>
+            <span class="n">column_name</span><span class="p">,</span>
+            <span class="n">group_by</span><span class="p">,</span>
+            <span class="n">clipping_threshold</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># Add a dummy column to group by if group_by is empty</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">UnsupportedBackendError</span><span class="p">(</span>
+                <span class="s2">&quot;Expected pandas DataFrame in SQLite backend&quot;</span><span class="p">,</span>
+                <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;actual_type&quot;</span><span class="p">:</span> <span class="nb">type</span><span class="p">(</span><span class="n">df</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">},</span>
+                <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Convert the input to a pandas.DataFrame before &quot;</span>
+                <span class="s2">&quot;calling apply_aggregation&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;_no_group_key_&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">group_by</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">grouped</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">group_by</span><span class="p">,</span> <span class="n">dropna</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">grouped</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;_no_group_key_&quot;</span><span class="p">,</span> <span class="n">dropna</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">agg_type</span> <span class="o">==</span> <span class="n">Aggregation</span><span class="o">.</span><span class="n">COUNT</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="n">grouped</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">column_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;*&quot;</span>
+                <span class="k">else</span> <span class="n">grouped</span><span class="p">[</span><span class="n">column_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">agg_type</span> <span class="o">==</span> <span class="n">Aggregation</span><span class="o">.</span><span class="n">COUNT_DISTINCT</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">grouped</span><span class="p">[</span><span class="n">column_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">agg_type</span> <span class="o">==</span> <span class="n">Aggregation</span><span class="o">.</span><span class="n">SUM</span><span class="p">:</span>
+            <span class="n">lower_bound</span><span class="p">,</span> <span class="n">upper_bound</span> <span class="o">=</span> <span class="n">safely_get_threshold</span><span class="p">(</span>
+                <span class="n">clipping_threshold</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">agg_type</span><span class="o">.</span><span class="n">name</span>
+            <span class="p">)</span>
+            <span class="c1"># Clip the value to [lower_bound, upper_bound] and sum</span>
+            <span class="k">return</span> <span class="n">grouped</span><span class="p">[</span><span class="n">column_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">lower</span><span class="o">=</span><span class="n">lower_bound</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="n">upper_bound</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">agg_type</span> <span class="o">==</span> <span class="n">Aggregation</span><span class="o">.</span><span class="n">SQUARED_SUM</span><span class="p">:</span>
+            <span class="n">lower_bound</span><span class="p">,</span> <span class="n">upper_bound</span> <span class="o">=</span> <span class="n">safely_get_threshold</span><span class="p">(</span>
+                <span class="n">clipping_threshold</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">agg_type</span><span class="o">.</span><span class="n">name</span>
+            <span class="p">)</span>
+            <span class="c1"># Clip the value to [lower_bound, upper_bound], square it, and sum</span>
+            <span class="k">return</span> <span class="n">grouped</span><span class="p">[</span><span class="n">column_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">lower</span><span class="o">=</span><span class="n">lower_bound</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="n">upper_bound</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">agg_type</span> <span class="o">==</span> <span class="n">Aggregation</span><span class="o">.</span><span class="n">PRODUCT_SUM</span><span class="p">:</span>
+            <span class="n">lower_bound_x</span><span class="p">,</span> <span class="n">upper_bound_x</span> <span class="o">=</span> <span class="n">safely_get_threshold</span><span class="p">(</span>
+                <span class="n">clipping_threshold</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">agg_type</span><span class="o">.</span><span class="n">name</span>
+            <span class="p">)</span>
+            <span class="n">lower_bound_y</span><span class="p">,</span> <span class="n">upper_bound_y</span> <span class="o">=</span> <span class="n">safely_get_threshold</span><span class="p">(</span>
+                <span class="n">clipping_threshold</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">agg_type</span><span class="o">.</span><span class="n">name</span>
+            <span class="p">)</span>
+            <span class="c1"># Clip the values to [lower_bound, upper_bound], multiply them, and sum</span>
+            <span class="k">return</span> <span class="n">grouped</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">g</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="n">g</span><span class="p">[</span><span class="n">column_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">lower</span><span class="o">=</span><span class="n">lower_bound_x</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="n">upper_bound_x</span><span class="p">)</span>
+                    <span class="o">*</span> <span class="n">g</span><span class="p">[</span><span class="n">column_name</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">lower</span><span class="o">=</span><span class="n">lower_bound_y</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="n">upper_bound_y</span><span class="p">)</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">AggregationError</span><span class="p">(</span>
+                <span class="s2">&quot;Unsupported aggregation type&quot;</span><span class="p">,</span>
+                <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;agg_type&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">agg_type</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">agg_type</span><span class="p">))},</span>
+                <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Use one of COUNT, COUNT_DISTINCT, SUM, SQUARED_SUM, PRODUCT_SUM&quot;</span><span class="p">,</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SQLiteBackend.use_database">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLiteBackend.use_database">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">use_database</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;SQLite use_database called: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">database_name</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        In SQLite, &quot;USE database&quot; is not directly supported as in MySQL or Spark.</span>
+<span class="sd">        If you need to switch to a new database file, you can create a new</span>
+<span class="sd">        connection or attach the database. By default, we do nothing here.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">database_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">UnsupportedBackendError</span><span class="p">(</span>
+                <span class="s2">&quot;Unsupported database switch in SQLite backend&quot;</span><span class="p">,</span>
+                <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;requested_database&quot;</span><span class="p">:</span> <span class="n">database_name</span><span class="p">},</span>
+                <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Create a new connection for another database&quot;</span><span class="p">,</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SQLiteBackend.get_table_name">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLiteBackend.get_table_name">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_table_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;SQLite get_table_name&quot;</span><span class="p">)</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="s2">&quot;SELECT name FROM sqlite_master WHERE type=&#39;table&#39; ORDER BY name;&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span></div>
+
+
+<div class="viewcode-block" id="SQLiteBackend.filter_by_selected_keys">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLiteBackend.filter_by_selected_keys">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter_by_selected_keys</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="n">DataFrameLike</span><span class="p">,</span>
+        <span class="n">group_by</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">selected_keys</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;SQLite filter_by_selected_keys: group_by=</span><span class="si">%s</span><span class="s2"> selected_keys_count=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">group_by</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">selected_keys</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">UnsupportedBackendError</span><span class="p">(</span>
+                <span class="s2">&quot;df must be a Pandas DataFrame&quot;</span><span class="p">,</span>
+                <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;actual_type&quot;</span><span class="p">:</span> <span class="nb">type</span><span class="p">(</span><span class="n">df</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">},</span>
+                <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Ensure the upstream backend returns a pandas.DataFrame&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">group_by</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># If no group by columns, return the original DataFrame</span>
+            <span class="k">return</span> <span class="n">df</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ref_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">selected_keys</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">group_by</span><span class="p">)</span>
+            <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">ref_df</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="n">group_by</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;inner&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">filtered_df</span></div>
+
+
+<div class="viewcode-block" id="SQLiteBackend.get_column_name">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLiteBackend.get_column_name">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_column_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;SQLite get_column_name: table=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">table_name</span><span class="p">)</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;PRAGMA table_info(</span><span class="si">{</span><span class="n">_quote_pragma_literal</span><span class="p">(</span><span class="n">table_name</span><span class="p">)</span><span class="si">}</span><span class="s2">);&quot;</span>
+        <span class="p">)</span>
+        <span class="c1"># The info columns are typically: (cid, name, type, notnull, dflt_value, pk)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span></div>
+
+
+<div class="viewcode-block" id="SQLiteBackend.is_inmemory_db">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLiteBackend.is_inmemory_db">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_inmemory_db</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;SQLite is_inmemory_db check&quot;</span><span class="p">)</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA database_list;&quot;</span><span class="p">)</span>
+        <span class="n">db_list</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+        <span class="c1"># The first database is the main database</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">db_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">db_list</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="SQLiteBackend.create_temporary_table">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLiteBackend.create_temporary_table">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_temporary_table</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;SQLite create_temporary_table: table=</span><span class="si">%s</span><span class="s2"> index=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">table_name</span><span class="p">,</span> <span class="n">index</span>
+        <span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a temporary table in the database.</span>
+<span class="sd">        Supports only in-memory databases.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            df (DataFrame): The DataFrame to create the temporary table from.</span>
+<span class="sd">            table_name (str): The name of the temporary table.</span>
+<span class="sd">            index (bool): Whether to include the index as</span>
+<span class="sd">            a column in the temporary table.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_inmemory_db</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">UnsupportedBackendError</span><span class="p">(</span>
+                <span class="s2">&quot;Temporary tables are allowed only in in-memory databases&quot;</span><span class="p">,</span>
+                <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;is_inmemory&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_inmemory_db</span><span class="p">()},</span>
+                <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Use an in-memory (:memory:) SQLite database&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">table_name</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;temp.&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+            <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">table_name</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="s2">&quot;temp.&quot;</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^temp\.[A-Za-z_][A-Za-z0-9_]*$&quot;</span><span class="p">,</span> <span class="n">table_name</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">table_name</span><span class="p">,</span> <span class="n">con</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s2">&quot;fail&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ExecutionBackendError</span><span class="p">(</span>
+                <span class="s2">&quot;Temporary table names must start with &#39;temp.&#39;.&quot;</span><span class="p">,</span>
+                <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;table_name&quot;</span><span class="p">:</span> <span class="n">table_name</span><span class="p">},</span>
+                <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Prefix the table name with &#39;temp.&#39;, e.g., temp.my_table&quot;</span><span class="p">,</span>
+            <span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

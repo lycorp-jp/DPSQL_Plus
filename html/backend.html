@@ -1,0 +1,845 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Backend &mdash; DPSQL+  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Engine" href="engine.html" />
+    <link rel="prev" title="Accountant" href="accountant.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            DPSQL+
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="accountant.html">Accountant</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Backend</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#dpsql.backend.DuckDBBackend"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.DuckDBBackend.apply_aggregation"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.apply_aggregation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.DuckDBBackend.contribution_bound"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.contribution_bound()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.DuckDBBackend.create_inner_df"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.create_inner_df()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.DuckDBBackend.create_temporary_table"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.create_temporary_table()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.DuckDBBackend.filter_by_selected_keys"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.filter_by_selected_keys()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.DuckDBBackend.get_column_name"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.get_column_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.DuckDBBackend.get_table_name"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.get_table_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.DuckDBBackend.use_database"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.use_database()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#dpsql.backend.SQLBackend"><code class="docutils literal notranslate"><span class="pre">SQLBackend</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLBackend.apply_aggregation"><code class="docutils literal notranslate"><span class="pre">SQLBackend.apply_aggregation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLBackend.contribution_bound"><code class="docutils literal notranslate"><span class="pre">SQLBackend.contribution_bound()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLBackend.create_final_df"><code class="docutils literal notranslate"><span class="pre">SQLBackend.create_final_df()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLBackend.create_inner_df"><code class="docutils literal notranslate"><span class="pre">SQLBackend.create_inner_df()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLBackend.create_temporary_table"><code class="docutils literal notranslate"><span class="pre">SQLBackend.create_temporary_table()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLBackend.execute_sql"><code class="docutils literal notranslate"><span class="pre">SQLBackend.execute_sql()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLBackend.filter_by_selected_keys"><code class="docutils literal notranslate"><span class="pre">SQLBackend.filter_by_selected_keys()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLBackend.get_column_name"><code class="docutils literal notranslate"><span class="pre">SQLBackend.get_column_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLBackend.get_table_name"><code class="docutils literal notranslate"><span class="pre">SQLBackend.get_table_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLBackend.key_selection"><code class="docutils literal notranslate"><span class="pre">SQLBackend.key_selection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLBackend.use_database"><code class="docutils literal notranslate"><span class="pre">SQLBackend.use_database()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#dpsql.backend.SQLiteBackend"><code class="docutils literal notranslate"><span class="pre">SQLiteBackend</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLiteBackend.apply_aggregation"><code class="docutils literal notranslate"><span class="pre">SQLiteBackend.apply_aggregation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLiteBackend.contribution_bound"><code class="docutils literal notranslate"><span class="pre">SQLiteBackend.contribution_bound()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLiteBackend.create_inner_df"><code class="docutils literal notranslate"><span class="pre">SQLiteBackend.create_inner_df()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLiteBackend.create_temporary_table"><code class="docutils literal notranslate"><span class="pre">SQLiteBackend.create_temporary_table()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLiteBackend.filter_by_selected_keys"><code class="docutils literal notranslate"><span class="pre">SQLiteBackend.filter_by_selected_keys()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLiteBackend.get_column_name"><code class="docutils literal notranslate"><span class="pre">SQLiteBackend.get_column_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLiteBackend.get_table_name"><code class="docutils literal notranslate"><span class="pre">SQLiteBackend.get_table_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLiteBackend.is_inmemory_db"><code class="docutils literal notranslate"><span class="pre">SQLiteBackend.is_inmemory_db()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SQLiteBackend.use_database"><code class="docutils literal notranslate"><span class="pre">SQLiteBackend.use_database()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#dpsql.backend.SparkSQLBackend"><code class="docutils literal notranslate"><span class="pre">SparkSQLBackend</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SparkSQLBackend.apply_aggregation"><code class="docutils literal notranslate"><span class="pre">SparkSQLBackend.apply_aggregation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SparkSQLBackend.contribution_bound"><code class="docutils literal notranslate"><span class="pre">SparkSQLBackend.contribution_bound()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SparkSQLBackend.create_inner_df"><code class="docutils literal notranslate"><span class="pre">SparkSQLBackend.create_inner_df()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SparkSQLBackend.create_temporary_table"><code class="docutils literal notranslate"><span class="pre">SparkSQLBackend.create_temporary_table()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SparkSQLBackend.filter_by_selected_keys"><code class="docutils literal notranslate"><span class="pre">SparkSQLBackend.filter_by_selected_keys()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SparkSQLBackend.get_column_name"><code class="docutils literal notranslate"><span class="pre">SparkSQLBackend.get_column_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SparkSQLBackend.get_table_name"><code class="docutils literal notranslate"><span class="pre">SparkSQLBackend.get_table_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.backend.SparkSQLBackend.use_database"><code class="docutils literal notranslate"><span class="pre">SparkSQLBackend.use_database()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="engine.html">Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validator.html">Validator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dpparams.html">DPParams</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DPSQL+</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Backend</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/backend.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="backend">
+<h1>Backend<a class="headerlink" href="#backend" title="Link to this heading"></a></h1>
+<p>The DPSQL+ Backend handles the low-level operations required to execute differentially private SQL queries.</p>
+<p>We provide backends for different data storage systems, including PySpark, SQLite, and DuckDB.</p>
+<dl class="py class" id="module-dpsql.backend">
+<dt class="sig sig-object py" id="dpsql.backend.DuckDBBackend">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dpsql.backend.</span></span><span class="sig-name descname"><span class="pre">DuckDBBackend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">conn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DuckDBPyConnection</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dpsql/backend/duckdb_backend.html#DuckDBBackend"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.DuckDBBackend" title="Link to this definition"></a></dt>
+<dd><p>Backend for executing DuckDB queries with differential privacy mechanisms.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>conn</strong> (<em>duckdb.DuckDBPyConnection</em>) – A live DuckDB connection object.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.DuckDBBackend.apply_aggregation">
+<span class="sig-name descname"><span class="pre">apply_aggregation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agg_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Aggregation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clipping_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/dpsql/backend/duckdb_backend.html#DuckDBBackend.apply_aggregation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.DuckDBBackend.apply_aggregation" title="Link to this definition"></a></dt>
+<dd><p>Apply noisy aggregation to the DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agg_type</strong> (<em>Aggregation</em>) – The type of aggregation to apply.</p></li>
+<li><p><strong>column_name</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The column name(s) to aggregate.</p></li>
+<li><p><strong>df</strong> (<em>DataFrame</em>) – The DataFrame to aggregate.</p></li>
+<li><p><strong>group_by</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The list of columns to group by.</p></li>
+<li><p><strong>clipping_threshold</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>]</em><em>] </em><em>| </em><em>None</em>) – The clipping thresholds for each column.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The DataFrame with aggregation applied.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.DuckDBBackend.contribution_bound">
+<span class="sig-name descname"><span class="pre">contribution_bound</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inner_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">privacy_unit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><span class="pre">DPParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/dpsql/backend/duckdb_backend.html#DuckDBBackend.contribution_bound"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.DuckDBBackend.contribution_bound" title="Link to this definition"></a></dt>
+<dd><p>Apply contribution bounding to the intermediate DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inner_df</strong> (<em>DataFrameLike</em>) – The intermediate DataFrame.</p></li>
+<li><p><strong>privacy_unit</strong> (<em>str</em>) – The column name to use as the privacy unit.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><em>DPParams</em></a>) – The differential privacy parameters to use.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The filtered DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrameLike</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.DuckDBBackend.create_inner_df">
+<span class="sig-name descname"><span class="pre">create_inner_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inner_sql</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/dpsql/backend/duckdb_backend.html#DuckDBBackend.create_inner_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.DuckDBBackend.create_inner_df" title="Link to this definition"></a></dt>
+<dd><p>Create the intermediate DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>sql</strong> (<em>str</em>) – The SQL query to execute.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The intermediate DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrameLike</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.DuckDBBackend.create_temporary_table">
+<span class="sig-name descname"><span class="pre">create_temporary_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/dpsql/backend/duckdb_backend.html#DuckDBBackend.create_temporary_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.DuckDBBackend.create_temporary_table" title="Link to this definition"></a></dt>
+<dd><p>Create a temporary table in the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrame</em>) – The DataFrame to create the temporary table from.</p></li>
+<li><p><strong>table_name</strong> (<em>str</em>) – The name of the temporary table.</p></li>
+<li><p><strong>index</strong> (<em>bool</em>) – Whether to include the index as
+a column in the temporary table.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.DuckDBBackend.filter_by_selected_keys">
+<span class="sig-name descname"><span class="pre">filter_by_selected_keys</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">selected_keys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/dpsql/backend/duckdb_backend.html#DuckDBBackend.filter_by_selected_keys"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.DuckDBBackend.filter_by_selected_keys" title="Link to this definition"></a></dt>
+<dd><p>Filter DataFrame to only include records with selected keys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrameLike</em>) – The DataFrame to filter.</p></li>
+<li><p><strong>group_by</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The list of columns to group by.</p></li>
+<li><p><strong>selected_keys</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em><em>]</em>) – List containing the selected keys.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The filtered DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrameLike</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.DuckDBBackend.get_column_name">
+<span class="sig-name descname"><span class="pre">get_column_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/dpsql/backend/duckdb_backend.html#DuckDBBackend.get_column_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.DuckDBBackend.get_column_name" title="Link to this definition"></a></dt>
+<dd><p>Get the list of columns in the table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>table_name</strong> (<em>str</em>) – The name of the table.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The list of column names.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.DuckDBBackend.get_table_name">
+<span class="sig-name descname"><span class="pre">get_table_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/dpsql/backend/duckdb_backend.html#DuckDBBackend.get_table_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.DuckDBBackend.get_table_name" title="Link to this definition"></a></dt>
+<dd><p>Get the list of tables in the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The list of table names.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.DuckDBBackend.use_database">
+<span class="sig-name descname"><span class="pre">use_database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/dpsql/backend/duckdb_backend.html#DuckDBBackend.use_database"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.DuckDBBackend.use_database" title="Link to this definition"></a></dt>
+<dd><p>Use a database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>database_name</strong> (<em>str</em>) – The name of the database to use.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dpsql.backend.SQLBackend">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dpsql.backend.</span></span><span class="sig-name descname"><span class="pre">SQLBackend</span></span><a class="reference internal" href="_modules/dpsql/backend/sql_backend.html#SQLBackend"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLBackend" title="Link to this definition"></a></dt>
+<dd><p>Abstract class for executing SQL queries with differential privacy mechanisms.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLBackend.apply_aggregation">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">apply_aggregation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agg_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Aggregation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clipping_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sql_backend.html#SQLBackend.apply_aggregation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLBackend.apply_aggregation" title="Link to this definition"></a></dt>
+<dd><p>Apply noisy aggregation to the DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agg_type</strong> (<em>Aggregation</em>) – The type of aggregation to apply.</p></li>
+<li><p><strong>column_name</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The column name(s) to aggregate.</p></li>
+<li><p><strong>df</strong> (<em>DataFrame</em>) – The DataFrame to aggregate.</p></li>
+<li><p><strong>group_by</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The list of columns to group by.</p></li>
+<li><p><strong>clipping_threshold</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>]</em><em>] </em><em>| </em><em>None</em>) – The clipping thresholds for each column.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The DataFrame with aggregation applied.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLBackend.contribution_bound">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">contribution_bound</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inner_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">privacy_unit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><span class="pre">DPParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sql_backend.html#SQLBackend.contribution_bound"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLBackend.contribution_bound" title="Link to this definition"></a></dt>
+<dd><p>Apply contribution bounding to the intermediate DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inner_df</strong> (<em>DataFrameLike</em>) – The intermediate DataFrame.</p></li>
+<li><p><strong>privacy_unit</strong> (<em>str</em>) – The column name to use as the privacy unit.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><em>DPParams</em></a>) – The differential privacy parameters to use.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The filtered DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrameLike</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLBackend.create_final_df">
+<span class="sig-name descname"><span class="pre">create_final_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filtered_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">agg_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">AggregationColumn</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigmas</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clipping_thresholds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sql_backend.html#SQLBackend.create_final_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLBackend.create_final_df" title="Link to this definition"></a></dt>
+<dd><p>Create the final DataFrame with noisy aggregation applied.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filtered_df</strong> (<em>DataFrameLike</em>) – The filtered DataFrame.</p></li>
+<li><p><strong>agg_columns</strong> (<em>list</em><em>[</em><em>AggregationColumn</em><em>]</em>) – The list of aggregation columns to use.</p></li>
+<li><p><strong>group_by</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The list of columns to group by.</p></li>
+<li><p><strong>sigmas</strong> (<em>list</em><em>[</em><em>float</em><em>]</em>) – The list of noise standard deviations
+for each aggregation.</p></li>
+<li><p><strong>clipping_thresholds</strong> (<em>list</em><em>[</em><em>list</em><em>[</em><em>tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>]</em><em>] </em><em>| </em><em>None</em><em>]</em>) – The list of clipping thresholds for each aggregation column.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The final DataFrame with DP mechanisms applied.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLBackend.create_inner_df">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create_inner_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inner_sql</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sql_backend.html#SQLBackend.create_inner_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLBackend.create_inner_df" title="Link to this definition"></a></dt>
+<dd><p>Create the intermediate DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>sql</strong> (<em>str</em>) – The SQL query to execute.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The intermediate DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrameLike</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLBackend.create_temporary_table">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create_temporary_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sql_backend.html#SQLBackend.create_temporary_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLBackend.create_temporary_table" title="Link to this definition"></a></dt>
+<dd><p>Create a temporary table in the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrame</em>) – The DataFrame to create the temporary table from.</p></li>
+<li><p><strong>table_name</strong> (<em>str</em>) – The name of the temporary table.</p></li>
+<li><p><strong>index</strong> (<em>bool</em>) – Whether to include the index as
+a column in the temporary table.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLBackend.execute_sql">
+<span class="sig-name descname"><span class="pre">execute_sql</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">privacy_unit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><span class="pre">DPParams</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">inner_sql</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">agg_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">AggregationColumn</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ordering_terms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sql_backend.html#SQLBackend.execute_sql"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLBackend.execute_sql" title="Link to this definition"></a></dt>
+<dd><p>Execute a SQL query with differential privacy mechanisms.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>privacy_unit</strong> (<em>str</em>) – The column name to use as the privacy unit.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><em>DPParams</em></a>) – The differential privacy parameters to use.</p></li>
+<li><p><strong>inner_sql</strong> (<em>str</em>) – The SQL query to create the intermediate table.</p></li>
+<li><p><strong>agg_columns</strong> (<em>list</em><em>[</em><em>AggregationColumn</em><em>]</em>) – The list of aggregation columns to use.</p></li>
+<li><p><strong>group_by_columns</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The list of columns to group by.</p></li>
+<li><p><strong>ordering_terms</strong> (<em>list</em><em>[</em><em>dict</em><em>[</em><em>str</em><em>, </em><em>str</em><em> | </em><em>None</em><em>]</em><em>]</em>) – The list of ordering terms for the final result.</p></li>
+<li><p><strong>limit</strong> (<em>int</em><em> | </em><em>None</em>) – The maximum number of rows to return.</p></li>
+<li><p><strong>offset</strong> (<em>int</em><em> | </em><em>None</em>) – The number of rows to skip before returning results.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The result of the SQL query with DP mechanisms applied.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLBackend.filter_by_selected_keys">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">filter_by_selected_keys</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">selected_keys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sql_backend.html#SQLBackend.filter_by_selected_keys"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLBackend.filter_by_selected_keys" title="Link to this definition"></a></dt>
+<dd><p>Filter DataFrame to only include records with selected keys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrameLike</em>) – The DataFrame to filter.</p></li>
+<li><p><strong>group_by</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The list of columns to group by.</p></li>
+<li><p><strong>selected_keys</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em><em>]</em>) – List containing the selected keys.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The filtered DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrameLike</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLBackend.get_column_name">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_column_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/dpsql/backend/sql_backend.html#SQLBackend.get_column_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLBackend.get_column_name" title="Link to this definition"></a></dt>
+<dd><p>Get the list of columns in the table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>table_name</strong> (<em>str</em>) – The name of the table.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The list of column names.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLBackend.get_table_name">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_table_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/dpsql/backend/sql_backend.html#SQLBackend.get_table_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLBackend.get_table_name" title="Link to this definition"></a></dt>
+<dd><p>Get the list of tables in the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The list of table names.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLBackend.key_selection">
+<span class="sig-name descname"><span class="pre">key_selection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filtered_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">privacy_unit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_frequency</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tau</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/dpsql/backend/sql_backend.html#SQLBackend.key_selection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLBackend.key_selection" title="Link to this definition"></a></dt>
+<dd><p>Perform key selection (tau-thresholding) to determine which keys to keep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filtered_df</strong> (<em>DataFrameLike</em>) – The filtered DataFrame.</p></li>
+<li><p><strong>group_by</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The list of columns to group by.</p></li>
+<li><p><strong>privacy_unit</strong> (<em>str</em>) – The column name to use as the privacy unit.</p></li>
+<li><p><strong>min_frequency</strong> (<em>int</em>) – The threshold for first thresholding
+before adding noise. It satisfies minimum frequency rule.</p></li>
+<li><p><strong>sigma</strong> (<em>float</em>) – The standard deviation
+for the Gaussian mechanism before the second thresholding.</p></li>
+<li><p><strong>tau</strong> (<em>float</em>) – The threshold for second thresholding after adding noise.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List containing
+the selected keys that pass the threshold.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[tuple[str, …]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLBackend.use_database">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">use_database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sql_backend.html#SQLBackend.use_database"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLBackend.use_database" title="Link to this definition"></a></dt>
+<dd><p>Use a database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>database_name</strong> (<em>str</em>) – The name of the database to use.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dpsql.backend.SQLiteBackend">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dpsql.backend.</span></span><span class="sig-name descname"><span class="pre">SQLiteBackend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">conn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Connection</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dpsql/backend/sqlite_backend.html#SQLiteBackend"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLiteBackend" title="Link to this definition"></a></dt>
+<dd><p>Backend for executing SQLite queries with differential privacy mechanisms.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>conn</strong> (<em>sqlite3.Connection</em>) – A live SQLite connection object.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLiteBackend.apply_aggregation">
+<span class="sig-name descname"><span class="pre">apply_aggregation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agg_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Aggregation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clipping_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sqlite_backend.html#SQLiteBackend.apply_aggregation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLiteBackend.apply_aggregation" title="Link to this definition"></a></dt>
+<dd><p>Apply noisy aggregation to the DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agg_type</strong> (<em>Aggregation</em>) – The type of aggregation to apply.</p></li>
+<li><p><strong>column_name</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The column name(s) to aggregate.</p></li>
+<li><p><strong>df</strong> (<em>DataFrame</em>) – The DataFrame to aggregate.</p></li>
+<li><p><strong>group_by</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The list of columns to group by.</p></li>
+<li><p><strong>clipping_threshold</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>]</em><em>] </em><em>| </em><em>None</em>) – The clipping thresholds for each column.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The DataFrame with aggregation applied.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLiteBackend.contribution_bound">
+<span class="sig-name descname"><span class="pre">contribution_bound</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inner_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">privacy_unit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><span class="pre">DPParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sqlite_backend.html#SQLiteBackend.contribution_bound"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLiteBackend.contribution_bound" title="Link to this definition"></a></dt>
+<dd><p>Apply contribution bounding to the intermediate DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inner_df</strong> (<em>DataFrameLike</em>) – The intermediate DataFrame.</p></li>
+<li><p><strong>privacy_unit</strong> (<em>str</em>) – The column name to use as the privacy unit.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><em>DPParams</em></a>) – The differential privacy parameters to use.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The filtered DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrameLike</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLiteBackend.create_inner_df">
+<span class="sig-name descname"><span class="pre">create_inner_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inner_sql</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sqlite_backend.html#SQLiteBackend.create_inner_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLiteBackend.create_inner_df" title="Link to this definition"></a></dt>
+<dd><p>Create the intermediate DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>sql</strong> (<em>str</em>) – The SQL query to execute.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The intermediate DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrameLike</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLiteBackend.create_temporary_table">
+<span class="sig-name descname"><span class="pre">create_temporary_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sqlite_backend.html#SQLiteBackend.create_temporary_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLiteBackend.create_temporary_table" title="Link to this definition"></a></dt>
+<dd><p>Create a temporary table in the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrame</em>) – The DataFrame to create the temporary table from.</p></li>
+<li><p><strong>table_name</strong> (<em>str</em>) – The name of the temporary table.</p></li>
+<li><p><strong>index</strong> (<em>bool</em>) – Whether to include the index as
+a column in the temporary table.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLiteBackend.filter_by_selected_keys">
+<span class="sig-name descname"><span class="pre">filter_by_selected_keys</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">selected_keys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sqlite_backend.html#SQLiteBackend.filter_by_selected_keys"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLiteBackend.filter_by_selected_keys" title="Link to this definition"></a></dt>
+<dd><p>Filter DataFrame to only include records with selected keys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrameLike</em>) – The DataFrame to filter.</p></li>
+<li><p><strong>group_by</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The list of columns to group by.</p></li>
+<li><p><strong>selected_keys</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em><em>]</em>) – List containing the selected keys.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The filtered DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrameLike</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLiteBackend.get_column_name">
+<span class="sig-name descname"><span class="pre">get_column_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/dpsql/backend/sqlite_backend.html#SQLiteBackend.get_column_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLiteBackend.get_column_name" title="Link to this definition"></a></dt>
+<dd><p>Get the list of columns in the table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>table_name</strong> (<em>str</em>) – The name of the table.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The list of column names.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLiteBackend.get_table_name">
+<span class="sig-name descname"><span class="pre">get_table_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/dpsql/backend/sqlite_backend.html#SQLiteBackend.get_table_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLiteBackend.get_table_name" title="Link to this definition"></a></dt>
+<dd><p>Get the list of tables in the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The list of table names.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLiteBackend.is_inmemory_db">
+<span class="sig-name descname"><span class="pre">is_inmemory_db</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sqlite_backend.html#SQLiteBackend.is_inmemory_db"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLiteBackend.is_inmemory_db" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SQLiteBackend.use_database">
+<span class="sig-name descname"><span class="pre">use_database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/dpsql/backend/sqlite_backend.html#SQLiteBackend.use_database"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SQLiteBackend.use_database" title="Link to this definition"></a></dt>
+<dd><p>Use a database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>database_name</strong> (<em>str</em>) – The name of the database to use.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dpsql.backend.SparkSQLBackend">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dpsql.backend.</span></span><span class="sig-name descname"><span class="pre">SparkSQLBackend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spark_session</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SparkSession</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dpsql/backend/spark_sql_backend.html#SparkSQLBackend"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SparkSQLBackend" title="Link to this definition"></a></dt>
+<dd><p>Backend for executing SparkSQL queries with differential privacy mechanisms.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>spark_session</strong> (<em>SparkSession</em>) – The Spark session</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SparkSQLBackend.apply_aggregation">
+<span class="sig-name descname"><span class="pre">apply_aggregation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agg_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Aggregation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clipping_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/dpsql/backend/spark_sql_backend.html#SparkSQLBackend.apply_aggregation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SparkSQLBackend.apply_aggregation" title="Link to this definition"></a></dt>
+<dd><p>Apply noisy aggregation to the DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agg_type</strong> (<em>Aggregation</em>) – The type of aggregation to apply.</p></li>
+<li><p><strong>column_name</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The column name(s) to aggregate.</p></li>
+<li><p><strong>df</strong> (<em>DataFrame</em>) – The DataFrame to aggregate.</p></li>
+<li><p><strong>group_by</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The list of columns to group by.</p></li>
+<li><p><strong>clipping_threshold</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>]</em><em>] </em><em>| </em><em>None</em>) – The clipping thresholds for each column.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The DataFrame with aggregation applied.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SparkSQLBackend.contribution_bound">
+<span class="sig-name descname"><span class="pre">contribution_bound</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inner_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">privacy_unit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><span class="pre">DPParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/dpsql/backend/spark_sql_backend.html#SparkSQLBackend.contribution_bound"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SparkSQLBackend.contribution_bound" title="Link to this definition"></a></dt>
+<dd><p>Apply contribution bounding to the intermediate DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inner_df</strong> (<em>DataFrameLike</em>) – The intermediate DataFrame.</p></li>
+<li><p><strong>privacy_unit</strong> (<em>str</em>) – The column name to use as the privacy unit.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><em>DPParams</em></a>) – The differential privacy parameters to use.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The filtered DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrameLike</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SparkSQLBackend.create_inner_df">
+<span class="sig-name descname"><span class="pre">create_inner_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inner_sql</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/dpsql/backend/spark_sql_backend.html#SparkSQLBackend.create_inner_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SparkSQLBackend.create_inner_df" title="Link to this definition"></a></dt>
+<dd><p>Create the intermediate DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>sql</strong> (<em>str</em>) – The SQL query to execute.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The intermediate DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrameLike</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SparkSQLBackend.create_temporary_table">
+<span class="sig-name descname"><span class="pre">create_temporary_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/dpsql/backend/spark_sql_backend.html#SparkSQLBackend.create_temporary_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SparkSQLBackend.create_temporary_table" title="Link to this definition"></a></dt>
+<dd><p>Create a temporary table in the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrame</em>) – The DataFrame to create the temporary table from.</p></li>
+<li><p><strong>table_name</strong> (<em>str</em>) – The name of the temporary table.</p></li>
+<li><p><strong>index</strong> (<em>bool</em>) – Whether to include the index as
+a column in the temporary table.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SparkSQLBackend.filter_by_selected_keys">
+<span class="sig-name descname"><span class="pre">filter_by_selected_keys</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">selected_keys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/dpsql/backend/spark_sql_backend.html#SparkSQLBackend.filter_by_selected_keys"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SparkSQLBackend.filter_by_selected_keys" title="Link to this definition"></a></dt>
+<dd><p>Filter DataFrame to only include records with selected keys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrameLike</em>) – The DataFrame to filter.</p></li>
+<li><p><strong>group_by</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The list of columns to group by.</p></li>
+<li><p><strong>selected_keys</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em><em>]</em>) – List containing the selected keys.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The filtered DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrameLike</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SparkSQLBackend.get_column_name">
+<span class="sig-name descname"><span class="pre">get_column_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/dpsql/backend/spark_sql_backend.html#SparkSQLBackend.get_column_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SparkSQLBackend.get_column_name" title="Link to this definition"></a></dt>
+<dd><p>Get the list of columns in the table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>table_name</strong> (<em>str</em>) – The name of the table.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The list of column names.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SparkSQLBackend.get_table_name">
+<span class="sig-name descname"><span class="pre">get_table_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/dpsql/backend/spark_sql_backend.html#SparkSQLBackend.get_table_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SparkSQLBackend.get_table_name" title="Link to this definition"></a></dt>
+<dd><p>Get the list of tables in the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The list of table names.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.backend.SparkSQLBackend.use_database">
+<span class="sig-name descname"><span class="pre">use_database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/dpsql/backend/spark_sql_backend.html#SparkSQLBackend.use_database"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.backend.SparkSQLBackend.use_database" title="Link to this definition"></a></dt>
+<dd><p>Use a database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>database_name</strong> (<em>str</em>) – The name of the database to use.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="accountant.html" class="btn btn-neutral float-left" title="Accountant" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="engine.html" class="btn btn-neutral float-right" title="Engine" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

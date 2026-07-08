@@ -1,0 +1,568 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dpsql.dp_params &mdash; DPSQL+  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs"></script>
+      <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
+      <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs";import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs";mermaid.registerLayoutLoaders(elkLayouts);mermaid.initialize({startOnLoad:false});</script>
+      <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+      <script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs";
+window.addEventListener("load", () => mermaid.run());
+</script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            DPSQL+
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../accountant.html">Accountant</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../backend.html">Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../engine.html">Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../validator.html">Validator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dpparams.html">DPParams</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">DPSQL+</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">dpsql.dp_params</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for dpsql.dp_params</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">stats</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.aggregation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Aggregation</span><span class="p">,</span> <span class="n">AggregationColumn</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.errors</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">AggregationError</span><span class="p">,</span>
+    <span class="n">InvalidPrivacyParametersError</span><span class="p">,</span>
+    <span class="n">UnsupportedQueryError</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">calibrate_analytic_gaussian_mechanism</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.validator.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_privacy_definition</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.accountant</span><span class="w"> </span><span class="kn">import</span> <span class="n">Accountant</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="DPParams">
+<a class="viewcode-back" href="../../dpparams.html#dpsql.dp_params.DPParams">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DPParams</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parameters for differential privacy.</span>
+<span class="sd">    Either of (epsilon, delta) or (sigmas, tau, sigma_for_thresholding)</span>
+<span class="sd">    must be provided.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        contribution_bound (int): The maximum number of records that</span>
+<span class="sd">            can be contributed by a single privacy unit.</span>
+<span class="sd">        clipping_thresholds (list[list[tuple[float, float]] | None]):</span>
+<span class="sd">            The list of clipping parameters for input data,</span>
+<span class="sd">            used to clip the input within the range [L, U] where each tuple is (L, U).</span>
+<span class="sd">            Each element is either None (for COUNT/COUNT_DISTINCT)</span>
+<span class="sd">            or a list of clipping thresholds</span>
+<span class="sd">            for each column in a multi-column aggregation.</span>
+<span class="sd">        min_frequency (int): The threshold for first thresholding before adding noise.</span>
+<span class="sd">            It satisfies minimum frequency rule. (Default: 1)</span>
+<span class="sd">        epsilon (float): The privacy budget for the query.</span>
+<span class="sd">        delta (float): The probability of failure for the privacy guarantee.</span>
+<span class="sd">        sigmas (list[float]): The standard deviations for the Gaussian mechanism.</span>
+<span class="sd">            Deprecated: Use epsilon and delta instead.</span>
+<span class="sd">        tau (float): The threshold for second thresholding after adding noise.</span>
+<span class="sd">            It is expected to be greater than or equal to min_frequency.</span>
+<span class="sd">            Deprecated: Use epsilon and delta instead.</span>
+<span class="sd">        sigma_for_thresholding (float): The standard deviation</span>
+<span class="sd">            for the Gaussian mechanism before the second thresholding.</span>
+<span class="sd">            Deprecated: Use epsilon and delta instead.</span>
+<span class="sd">        accountant_class (type[Accountant]): The privacy accountant class</span>
+<span class="sd">            to use for calculating tight privacy budget allocation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">contribution_bound</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">clipping_thresholds</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="n">min_frequency</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">epsilon</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">delta</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">sigmas</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">sigma_for_thresholding</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">accountant_class</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="s2">&quot;Accountant&quot;</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Validate the parameters</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Validating DPParams&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Init values: contribution_bound=</span><span class="si">%s</span><span class="s2"> min_frequency=</span><span class="si">%s</span><span class="s2"> epsilon=</span><span class="si">%s</span><span class="s2"> delta=</span><span class="si">%s</span><span class="s2"> &quot;</span>
+            <span class="s2">&quot;sigmas=</span><span class="si">%s</span><span class="s2"> tau=</span><span class="si">%s</span><span class="s2"> sigma_for_thresholding=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">contribution_bound</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">min_frequency</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sigmas</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sigma_for_thresholding</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Show deprecation warning if sigmas is used</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigmas</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;The &#39;sigmas&#39; parameter is deprecated.&quot;</span>
+                <span class="s2">&quot;Use &#39;epsilon&#39; and &#39;delta&#39; instead.&quot;</span><span class="p">,</span>
+                <span class="ne">DeprecationWarning</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="c1"># contribution_bound must be at least 1</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">contribution_bound</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidPrivacyParametersError</span><span class="p">(</span>
+                <span class="s2">&quot;Invalid `contribution_bound` (must be &gt;= 1)&quot;</span><span class="p">,</span>
+                <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;contribution_bound&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">contribution_bound</span><span class="p">},</span>
+                <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Set contribution_bound to an integer &gt;= 1&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="c1"># min_frequency must be at least 1</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_frequency</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidPrivacyParametersError</span><span class="p">(</span>
+                <span class="s2">&quot;Invalid `min_frequency` (must be &gt;= 1)&quot;</span><span class="p">,</span>
+                <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;min_frequency&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_frequency</span><span class="p">},</span>
+                <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Set min_frequency to an integer &gt;= 1&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># If epsilon and delta are not set, sigmas, tau,</span>
+            <span class="c1"># and sigma_for_thresholding must be set</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sigmas</span> <span class="ow">is</span> <span class="kc">None</span>
+                <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="ow">is</span> <span class="kc">None</span>
+                <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_for_thresholding</span> <span class="ow">is</span> <span class="kc">None</span>
+            <span class="p">):</span>
+                <span class="k">raise</span> <span class="n">InvalidPrivacyParametersError</span><span class="p">(</span>
+                    <span class="s2">&quot;Missing required privacy parameters &quot;</span>
+                    <span class="s2">&quot;(provide either (epsilon, delta) &quot;</span>
+                    <span class="s2">&quot;or (sigmas, tau, sigma_for_thresholding))&quot;</span><span class="p">,</span>
+                    <span class="n">context</span><span class="o">=</span><span class="p">{</span>
+                        <span class="s2">&quot;epsilon&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span>
+                        <span class="s2">&quot;delta&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">,</span>
+                        <span class="s2">&quot;sigmas&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigmas</span><span class="p">,</span>
+                        <span class="s2">&quot;tau&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">,</span>
+                        <span class="s2">&quot;sigma_for_thresholding&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_for_thresholding</span><span class="p">,</span>
+                    <span class="p">},</span>
+                    <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Supply epsilon &amp; delta OR sigmas, tau, &quot;</span>
+                    <span class="s2">&quot;sigma_for_thresholding&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Using (sigmas, tau, sigma_for_thresholding) mode&quot;</span><span class="p">)</span>
+            <span class="c1"># tau must be greater than or equal to min_frequency</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_frequency</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InvalidPrivacyParametersError</span><span class="p">(</span>
+                    <span class="s2">&quot;Invalid `tau` (must be &gt;= min_frequency)&quot;</span><span class="p">,</span>
+                    <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;tau&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">,</span> <span class="s2">&quot;min_frequency&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_frequency</span><span class="p">},</span>
+                    <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Increase tau or decrease min_frequency&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="c1"># sigmas and sigma_for_thresholding must be non-negative</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">s</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigmas</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_for_thresholding</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InvalidPrivacyParametersError</span><span class="p">(</span>
+                    <span class="s2">&quot;Invalid noise scales &quot;</span>
+                    <span class="s2">&quot;(sigmas and sigma_for_thresholding must be &gt;= 0)&quot;</span><span class="p">,</span>
+                    <span class="n">context</span><span class="o">=</span><span class="p">{</span>
+                        <span class="s2">&quot;sigmas&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigmas</span><span class="p">,</span>
+                        <span class="s2">&quot;sigma_for_thresholding&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_for_thresholding</span><span class="p">,</span>
+                    <span class="p">},</span>
+                    <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Ensure all noise scale parameters are &gt;= 0&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># epsilon and delta must be positive and delta must be &lt;= 1</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InvalidPrivacyParametersError</span><span class="p">(</span>
+                    <span class="s2">&quot;Invalid (epsilon, delta) &quot;</span>
+                    <span class="s2">&quot;(epsilon &gt; 0 and 0 &lt; delta &lt;= 1 required)&quot;</span><span class="p">,</span>
+                    <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;epsilon&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span> <span class="s2">&quot;delta&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">},</span>
+                    <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Use epsilon &gt; 0 and 0 &lt; delta &lt;= 1&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;DPParams validation completed&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DPParams.get_noise_parameters">
+<a class="viewcode-back" href="../../dpparams.html#dpsql.dp_params.DPParams.get_noise_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_noise_parameters</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">sensitivities</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the noise parameters (sigmas, tau, sigma_for_thresholding).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sensitivities (list[float]): The sensitivities of the aggregation functions.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple[list[float], float, float]: The noise parameters</span>
+<span class="sd">            (sigmas, tau, sigma_for_thresholding).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Computing noise parameters&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Sensitivities: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">sensitivities</span><span class="p">)</span>
+        <span class="c1"># If all noise parameters are already set, return them</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_for_thresholding</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigmas</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sigmas</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_for_thresholding</span><span class="p">)</span>
+
+        <span class="c1"># Error handling</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidPrivacyParametersError</span><span class="p">(</span>
+                <span class="s2">&quot;Missing (epsilon, delta) to compute tau and sigma_for_thresholding&quot;</span><span class="p">,</span>
+                <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;epsilon&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span> <span class="s2">&quot;delta&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">},</span>
+                <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Initialize DPParams with epsilon &quot;</span>
+                <span class="s2">&quot;and delta or preset tau &amp; sigma_for_thresholding&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sensitivities</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">clipping_thresholds</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">InvalidPrivacyParametersError</span><span class="p">(</span>
+                <span class="s2">&quot;Mismatch between sensitivities and clipping thresholds count&quot;</span><span class="p">,</span>
+                <span class="n">context</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s2">&quot;num_sensitivities&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">sensitivities</span><span class="p">),</span>
+                    <span class="s2">&quot;num_clipping_thresholds&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">clipping_thresholds</span><span class="p">),</span>
+                <span class="p">},</span>
+                <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Provide one clipping threshold per aggregation column&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">accountant_class</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Directly use epsilon and delta without binary search</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;No accountant_class; computing directly with epsilon/delta&quot;</span><span class="p">)</span>
+            <span class="n">sigmas</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">sigma_for_thresholding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_noise_parameters</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">,</span> <span class="n">sensitivities</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># For other accountants, use binary search</span>
+            <span class="c1"># to find optimal epsilon allocation</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="s2">&quot;Using accountant_class=</span><span class="si">%s</span><span class="s2"> for epsilon allocation&quot;</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">accountant_class</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">accountant</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">accountant_class</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">)</span>
+            <span class="n">epsilon_ok</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_binary_search_epsilon</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">,</span> <span class="n">sensitivities</span><span class="p">,</span> <span class="n">accountant</span>
+            <span class="p">)</span>
+            <span class="n">sigmas</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">sigma_for_thresholding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_noise_parameters</span><span class="p">(</span>
+                <span class="n">epsilon_ok</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">,</span> <span class="n">sensitivities</span>
+            <span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Noise parameters computed: sigmas=</span><span class="si">%s</span><span class="s2"> tau=</span><span class="si">%s</span><span class="s2"> sigma_for_thresholding=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">sigmas</span><span class="p">,</span>
+            <span class="n">tau</span><span class="p">,</span>
+            <span class="n">sigma_for_thresholding</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">sigma_for_thresholding</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_binary_search_epsilon</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">epsilon</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">delta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">sensitivities</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+        <span class="n">accountant</span><span class="p">:</span> <span class="s2">&quot;Accountant&quot;</span><span class="p">,</span>
+        <span class="n">relative_max_epsilon</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">relative_tol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="o">**</span><span class="mi">5</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Binary search to find the maximum epsilon</span>
+<span class="sd">        that yields noisy parameters satisfying the budget.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            epsilon (float): The total privacy budget epsilon.</span>
+<span class="sd">            delta (float): The total privacy budget delta.</span>
+<span class="sd">            sensitivities (list[float]): The sensitivities of the aggregation functions.</span>
+<span class="sd">            accountant (Accountant): The privacy accountant to use.</span>
+<span class="sd">            relative_max_epsilon (float): The relative maximum epsilon for the search.</span>
+<span class="sd">            relative_tol (float): The relative tolerance for convergence.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: The maximum epsilon satisfying the budget.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Starting binary search for epsilon&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Initial: epsilon=</span><span class="si">%s</span><span class="s2"> delta=</span><span class="si">%s</span><span class="s2"> rel_max=</span><span class="si">%s</span><span class="s2"> rel_tol=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">epsilon</span><span class="p">,</span>
+            <span class="n">delta</span><span class="p">,</span>
+            <span class="n">relative_max_epsilon</span><span class="p">,</span>
+            <span class="n">relative_tol</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">epsilon_ok</span> <span class="o">=</span> <span class="n">epsilon</span>
+        <span class="n">epsilon_ng</span> <span class="o">=</span> <span class="n">epsilon</span> <span class="o">*</span> <span class="n">relative_max_epsilon</span>  <span class="c1"># initial upper bound</span>
+        <span class="k">while</span> <span class="n">epsilon_ng</span> <span class="o">-</span> <span class="n">epsilon_ok</span> <span class="o">&gt;</span> <span class="n">epsilon</span> <span class="o">*</span> <span class="n">relative_tol</span><span class="p">:</span>
+            <span class="n">epsilon_mid</span> <span class="o">=</span> <span class="p">(</span><span class="n">epsilon_ng</span> <span class="o">+</span> <span class="n">epsilon_ok</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="n">sigmas</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">sigma_for_thresholding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_noise_parameters</span><span class="p">(</span>
+                <span class="n">epsilon_mid</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">sensitivities</span>
+            <span class="p">)</span>
+            <span class="n">ok</span> <span class="o">=</span> <span class="n">accountant</span><span class="o">.</span><span class="n">_check_budget</span><span class="p">(</span>
+                <span class="n">sensitivities</span><span class="o">=</span><span class="n">sensitivities</span><span class="p">,</span>
+                <span class="n">params</span><span class="o">=</span><span class="n">DPParams</span><span class="p">(</span>
+                    <span class="n">contribution_bound</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">contribution_bound</span><span class="p">,</span>
+                    <span class="n">clipping_thresholds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">clipping_thresholds</span><span class="p">,</span>
+                    <span class="n">min_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min_frequency</span><span class="p">,</span>
+                    <span class="n">sigmas</span><span class="o">=</span><span class="n">sigmas</span><span class="p">,</span>
+                    <span class="n">tau</span><span class="o">=</span><span class="n">tau</span><span class="p">,</span>
+                    <span class="n">sigma_for_thresholding</span><span class="o">=</span><span class="n">sigma_for_thresholding</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">ok</span><span class="p">:</span>
+                <span class="n">epsilon_ok</span> <span class="o">=</span> <span class="n">epsilon_mid</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">epsilon_ng</span> <span class="o">=</span> <span class="n">epsilon_mid</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="s2">&quot;Mid epsilon=</span><span class="si">%s</span><span class="s2"> -&gt; ok=</span><span class="si">%s</span><span class="s2"> (epsilon_ok=</span><span class="si">%s</span><span class="s2"> epsilon_ng=</span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+                <span class="n">epsilon_mid</span><span class="p">,</span>
+                <span class="n">ok</span><span class="p">,</span>
+                <span class="n">epsilon_ok</span><span class="p">,</span>
+                <span class="n">epsilon_ng</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="c1"># epsilon_ok is guaranteed to be greater than or equal to epsilon</span>
+        <span class="c1"># because the initial lower bound is set to epsilon</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Binary search completed: epsilon_ok=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">epsilon_ok</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">epsilon_ok</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_noise_parameters</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">delta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">sensitivities</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+    <span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Compute noise params: epsilon=</span><span class="si">%s</span><span class="s2"> delta=</span><span class="si">%s</span><span class="s2"> sensitivities=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">epsilon</span><span class="p">,</span>
+            <span class="n">delta</span><span class="p">,</span>
+            <span class="n">sensitivities</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">epsilon_per_agg</span> <span class="o">=</span> <span class="n">epsilon</span> <span class="o">/</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sensitivities</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">delta_per_agg</span> <span class="o">=</span> <span class="n">delta</span> <span class="o">/</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sensitivities</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># calculate variance for each aggregation function</span>
+        <span class="n">sigmas</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">calibrate_analytic_gaussian_mechanism</span><span class="p">(</span>
+                <span class="n">epsilon_per_agg</span><span class="p">,</span> <span class="n">delta_per_agg</span><span class="p">,</span> <span class="n">sensitivity</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">sensitivity</span> <span class="ow">in</span> <span class="n">sensitivities</span>
+        <span class="p">]</span>
+        <span class="c1"># Compute tau and sigma_for_thresholding</span>
+        <span class="c1"># Split delta_for_thresholding into two parts</span>
+        <span class="n">delta_gaussian</span> <span class="o">=</span> <span class="n">delta_per_agg</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">delta_infinite</span> <span class="o">=</span> <span class="n">delta_per_agg</span> <span class="o">/</span> <span class="mi">2</span>
+
+        <span class="c1"># Calculate sigma_for_thresholding using the analytic Gaussian mechanism</span>
+        <span class="n">sigma_for_thresholding</span> <span class="o">=</span> <span class="n">calibrate_analytic_gaussian_mechanism</span><span class="p">(</span>
+            <span class="n">epsilon_per_agg</span><span class="p">,</span>
+            <span class="n">delta_gaussian</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">contribution_bound</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Calculate tau by inverting the formula in Theorem 4.1</span>
+        <span class="c1"># of [Wilkins et al., TPDP&#39;22]</span>
+        <span class="n">tau</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_frequency</span> <span class="o">+</span> <span class="n">sigma_for_thresholding</span> <span class="o">*</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span>
+            <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">delta_infinite</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">contribution_bound</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Computed: sigmas=</span><span class="si">%s</span><span class="s2"> tau=</span><span class="si">%s</span><span class="s2"> sigma_for_thresholding=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">sigmas</span><span class="p">,</span>
+            <span class="n">tau</span><span class="p">,</span>
+            <span class="n">sigma_for_thresholding</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">sigma_for_thresholding</span></div>
+
+
+
+<div class="viewcode-block" id="generate_dpparams">
+<a class="viewcode-back" href="../../dpparams.html#dpsql.dp_params.generate_dpparams">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_dpparams</span><span class="p">(</span>
+    <span class="n">privacy_params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span><span class="p">],</span>
+    <span class="n">agg_columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">AggregationColumn</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DPParams</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate dpparams from privacy_params, agg_func and parameters_list.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        privacy_params (dict): The privacy parameters. {&quot;EPSILON&quot;: float,</span>
+<span class="sd">          &quot;DELTA&quot;: float, &quot;CONTRIBUTION_BOUND&quot;: int, &quot;MIN_FREQUENCY&quot;: int}</span>
+<span class="sd">        agg_columns (list[AggregationColumn]): The list of aggregation columns.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        DPParams: The dpparams.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">clipping_thresholds</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">get_privacy_definition</span><span class="p">(</span><span class="n">privacy_params</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;DP&quot;</span><span class="p">,</span> <span class="s2">&quot;DP_MIN_FREQUENCY&quot;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">UnsupportedQueryError</span><span class="p">(</span>
+            <span class="s2">&quot;Unsupported privacy definition (expected DP or DP_MIN_FREQUENCY)&quot;</span><span class="p">,</span>
+            <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;privacy_definition&quot;</span><span class="p">:</span> <span class="n">get_privacy_definition</span><span class="p">(</span><span class="n">privacy_params</span><span class="p">)},</span>
+            <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Use DP or DP_MIN_FREQUENCY&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">epsilon</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">privacy_params</span><span class="p">[</span><span class="s2">&quot;EPSILON&quot;</span><span class="p">])</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">privacy_params</span><span class="p">[</span><span class="s2">&quot;DELTA&quot;</span><span class="p">])</span>
+    <span class="n">contribution_bound</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">privacy_params</span><span class="p">[</span><span class="s2">&quot;CONTRIBUTION_BOUND&quot;</span><span class="p">])</span>
+    <span class="n">min_frequency</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">privacy_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;MIN_FREQUENCY&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Generating DPParams from privacy_params&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;privacy_params=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">privacy_params</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;agg_columns count=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">agg_columns</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">agg_column</span> <span class="ow">in</span> <span class="n">agg_columns</span><span class="p">:</span>
+        <span class="n">agg</span> <span class="o">=</span> <span class="n">agg_column</span><span class="o">.</span><span class="n">aggregation_type</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="n">agg_column</span><span class="o">.</span><span class="n">parameters</span>
+        <span class="k">match</span> <span class="n">agg_column</span><span class="o">.</span><span class="n">aggregation_type</span><span class="p">:</span>
+            <span class="k">case</span> <span class="n">Aggregation</span><span class="o">.</span><span class="n">COUNT</span> <span class="o">|</span> <span class="n">Aggregation</span><span class="o">.</span><span class="n">COUNT_DISTINCT</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">AggregationError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Invalid parameter count for </span><span class="si">{</span><span class="n">agg</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (expected 0)&quot;</span><span class="p">,</span>
+                        <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;aggregation&quot;</span><span class="p">:</span> <span class="n">agg</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;parameters&quot;</span><span class="p">:</span> <span class="n">parameters</span><span class="p">},</span>
+                        <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Remove parameters for COUNT or COUNT_DISTINCT&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="n">clipping_thresholds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Aggregation </span><span class="si">%s</span><span class="s2">: no clipping params&quot;</span><span class="p">,</span> <span class="n">agg</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">case</span> <span class="p">(</span>
+                <span class="n">Aggregation</span><span class="o">.</span><span class="n">SUM</span>
+                <span class="o">|</span> <span class="n">Aggregation</span><span class="o">.</span><span class="n">AVG</span>
+                <span class="o">|</span> <span class="n">Aggregation</span><span class="o">.</span><span class="n">STDDEV_SAMP</span>
+                <span class="o">|</span> <span class="n">Aggregation</span><span class="o">.</span><span class="n">STDDEV_POP</span>
+                <span class="o">|</span> <span class="n">Aggregation</span><span class="o">.</span><span class="n">VAR_SAMP</span>
+                <span class="o">|</span> <span class="n">Aggregation</span><span class="o">.</span><span class="n">VAR_POP</span>
+            <span class="p">):</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">AggregationError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Invalid parameter count for </span><span class="si">{</span><span class="n">agg</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (expected 2)&quot;</span><span class="p">,</span>
+                        <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;aggregation&quot;</span><span class="p">:</span> <span class="n">agg</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;parameters&quot;</span><span class="p">:</span> <span class="n">parameters</span><span class="p">},</span>
+                        <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Provide (lower_bound, upper_bound)&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="n">clipping_thresholds</span><span class="o">.</span><span class="n">append</span><span class="p">([(</span><span class="n">parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">parameters</span><span class="p">[</span><span class="mi">1</span><span class="p">])])</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="s2">&quot;Aggregation </span><span class="si">%s</span><span class="s2">: clipping=(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+                    <span class="n">agg</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="n">parameters</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="p">)</span>
+            <span class="k">case</span> <span class="n">Aggregation</span><span class="o">.</span><span class="n">COVAR_SAMP</span> <span class="o">|</span> <span class="n">Aggregation</span><span class="o">.</span><span class="n">COVAR_POP</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">AggregationError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Invalid parameter count for </span><span class="si">{</span><span class="n">agg</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (expected 4)&quot;</span><span class="p">,</span>
+                        <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;aggregation&quot;</span><span class="p">:</span> <span class="n">agg</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;parameters&quot;</span><span class="p">:</span> <span class="n">parameters</span><span class="p">},</span>
+                        <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Provide (lower_bound_1, upper_bound_1, &quot;</span>
+                        <span class="s2">&quot;lower_bound_2, upper_bound_2)&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="n">clipping_thresholds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="p">(</span><span class="n">parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">parameters</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                        <span class="p">(</span><span class="n">parameters</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">parameters</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span>
+                    <span class="p">]</span>
+                <span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="s2">&quot;Aggregation </span><span class="si">%s</span><span class="s2">: clipping1=(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">) clipping2=(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+                    <span class="n">agg</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="n">parameters</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="n">parameters</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+                    <span class="n">parameters</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+                <span class="p">)</span>
+            <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">AggregationError</span><span class="p">(</span>
+                    <span class="s2">&quot;Unsupported aggregation type in parameter generation&quot;</span><span class="p">,</span>
+                    <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;aggregation&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">agg</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">agg</span><span class="p">))},</span>
+                    <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Extend generate_dpparams to handle this aggregation&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="s2">&quot;Constructing DPParams with epsilon=</span><span class="si">%s</span><span class="s2"> delta=</span><span class="si">%s</span><span class="s2"> &quot;</span>
+        <span class="s2">&quot;min_frequency=</span><span class="si">%s</span><span class="s2"> contribution_bound=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="n">epsilon</span><span class="p">,</span>
+        <span class="n">delta</span><span class="p">,</span>
+        <span class="n">min_frequency</span><span class="p">,</span>
+        <span class="n">contribution_bound</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">DPParams</span><span class="p">(</span>
+        <span class="n">contribution_bound</span><span class="o">=</span><span class="n">contribution_bound</span><span class="p">,</span>
+        <span class="n">clipping_thresholds</span><span class="o">=</span><span class="n">clipping_thresholds</span><span class="p">,</span>
+        <span class="n">min_frequency</span><span class="o">=</span><span class="n">min_frequency</span><span class="p">,</span>
+        <span class="n">epsilon</span><span class="o">=</span><span class="n">epsilon</span><span class="p">,</span>
+        <span class="n">delta</span><span class="o">=</span><span class="n">delta</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

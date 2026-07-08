@@ -1,0 +1,575 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dpsql.backend.sql_backend &mdash; DPSQL+  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs"></script>
+      <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
+      <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs";import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs";mermaid.registerLayoutLoaders(elkLayouts);mermaid.initialize({startOnLoad:false});</script>
+      <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+      <script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs";
+window.addEventListener("load", () => mermaid.run());
+</script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            DPSQL+
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../accountant.html">Accountant</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../backend.html">Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../engine.html">Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../validator.html">Validator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dpparams.html">DPParams</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">DPSQL+</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">dpsql.backend.sql_backend</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for dpsql.backend.sql_backend</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TypeAlias</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataFrame</span> <span class="k">as</span> <span class="n">SparkDataFrame</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..aggregation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Aggregation</span><span class="p">,</span> <span class="n">AggregationColumn</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..dp_params</span><span class="w"> </span><span class="kn">import</span> <span class="n">DPParams</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionBackendError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.aggregation_strategies</span><span class="w"> </span><span class="kn">import</span> <span class="n">AggregationFactory</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.secure_sampling</span><span class="w"> </span><span class="kn">import</span> <span class="n">secure_gauss</span>
+
+<span class="n">DataFrameLike</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="n">SparkDataFrame</span> <span class="o">|</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="SQLBackend">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLBackend">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SQLBackend</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">ABCMeta</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Abstract class for executing SQL queries with differential privacy mechanisms.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SQLBackend.execute_sql">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLBackend.execute_sql">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">execute_sql</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">privacy_unit</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">params</span><span class="p">:</span> <span class="n">DPParams</span><span class="p">,</span>
+        <span class="n">inner_sql</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">agg_columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">AggregationColumn</span><span class="p">],</span>
+        <span class="n">group_by_columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">ordering_terms</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]],</span>
+        <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Execute a SQL query with differential privacy mechanisms.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            privacy_unit (str): The column name to use as the privacy unit.</span>
+<span class="sd">            params (DPParams): The differential privacy parameters to use.</span>
+<span class="sd">            inner_sql (str): The SQL query to create the intermediate table.</span>
+<span class="sd">            agg_columns (list[AggregationColumn]):</span>
+<span class="sd">                The list of aggregation columns to use.</span>
+<span class="sd">            group_by_columns (list[str]): The list of columns to group by.</span>
+<span class="sd">            ordering_terms (list[dict[str, str | None]]):</span>
+<span class="sd">                The list of ordering terms for the final result.</span>
+<span class="sd">            limit (int | None): The maximum number of rows to return.</span>
+<span class="sd">            offset (int | None): The number of rows to skip before returning results.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            DataFrame: The result of the SQL query with DP mechanisms applied.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Backend execute_sql start&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Args: privacy_unit=</span><span class="si">%s</span><span class="s2">, group_by=</span><span class="si">%s</span><span class="s2">, ordering_terms=</span><span class="si">%s</span><span class="s2">,&quot;</span>
+            <span class="s2">&quot; limit=</span><span class="si">%s</span><span class="s2">, offset=</span><span class="si">%s</span><span class="s2">, agg_count=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">privacy_unit</span><span class="p">,</span>
+            <span class="n">group_by_columns</span><span class="p">,</span>
+            <span class="n">ordering_terms</span><span class="p">,</span>
+            <span class="n">limit</span><span class="p">,</span>
+            <span class="n">offset</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">agg_columns</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">group_by</span> <span class="o">=</span> <span class="n">group_by_columns</span>
+
+        <span class="c1"># Create intermediate table</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Creating inner_df (sql head): </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">inner_sql</span><span class="p">[:</span><span class="mi">200</span><span class="p">])</span>
+        <span class="n">inner_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_inner_df</span><span class="p">(</span><span class="n">inner_sql</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;inner_df created: type=</span><span class="si">%s</span><span class="s2">, shape=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="nb">type</span><span class="p">(</span><span class="n">inner_df</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="n">inner_df</span><span class="p">,</span> <span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="c1"># First contribution bounding</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Applying first contribution_bound: privacy_unit=</span><span class="si">%s</span><span class="s2">, bound=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">privacy_unit</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">.</span><span class="n">contribution_bound</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Applying first contribution_bound...&quot;</span><span class="p">)</span>
+        <span class="n">first_filtered_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">contribution_bound</span><span class="p">(</span><span class="n">inner_df</span><span class="p">,</span> <span class="n">privacy_unit</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;First filtered df: shape=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">first_filtered_df</span><span class="p">,</span> <span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Key selection (tau-thresholding) to determine which keys to keep</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Computing sensitivities for </span><span class="si">%s</span><span class="s2"> aggregations&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">agg_columns</span><span class="p">))</span>
+        <span class="n">sensitivities</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_sensitivities</span><span class="p">(</span><span class="n">agg_columns</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Sensitivities: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">sensitivities</span><span class="p">)</span>
+        <span class="n">sigmas</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">sigma_for_thresholding</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">get_noise_parameters</span><span class="p">(</span><span class="n">sensitivities</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Noise params: sigmas=</span><span class="si">%s</span><span class="s2">, tau=</span><span class="si">%s</span><span class="s2">, sigma_for_thresholding=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">sigmas</span><span class="p">,</span>
+            <span class="n">tau</span><span class="p">,</span>
+            <span class="n">sigma_for_thresholding</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Selecting keys: min_frequency=</span><span class="si">%s</span><span class="s2">, tau=</span><span class="si">%s</span><span class="s2">, sigma_th=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">.</span><span class="n">min_frequency</span><span class="p">,</span>
+            <span class="n">tau</span><span class="p">,</span>
+            <span class="n">sigma_for_thresholding</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Selecting keys for thresholding...&quot;</span><span class="p">)</span>
+        <span class="n">selected_keys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">key_selection</span><span class="p">(</span>
+            <span class="n">first_filtered_df</span><span class="p">,</span>
+            <span class="n">group_by</span><span class="p">,</span>
+            <span class="n">privacy_unit</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">.</span><span class="n">min_frequency</span><span class="p">,</span>
+            <span class="n">sigma_for_thresholding</span><span class="p">,</span>
+            <span class="n">tau</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Filter records to only include those with selected keys</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Filtering by selected keys...&quot;</span><span class="p">)</span>
+        <span class="n">key_filtered_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_by_selected_keys</span><span class="p">(</span>
+            <span class="n">inner_df</span><span class="p">,</span> <span class="n">group_by</span><span class="p">,</span> <span class="n">selected_keys</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Key-filtered df: shape=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">key_filtered_df</span><span class="p">,</span> <span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Second contribution bounding on the key-filtered data</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Applying second contribution_bound...&quot;</span><span class="p">)</span>
+        <span class="n">final_filtered_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">contribution_bound</span><span class="p">(</span>
+            <span class="n">key_filtered_df</span><span class="p">,</span> <span class="n">privacy_unit</span><span class="p">,</span> <span class="n">params</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Final filtered df: shape=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">final_filtered_df</span><span class="p">,</span> <span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Apply noisy aggregation</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Creating final_df with </span><span class="si">%s</span><span class="s2"> aggregations&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">agg_columns</span><span class="p">))</span>
+        <span class="n">final_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_final_df</span><span class="p">(</span>
+            <span class="n">final_filtered_df</span><span class="p">,</span> <span class="n">agg_columns</span><span class="p">,</span> <span class="n">group_by</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">clipping_thresholds</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;final_df created: shape=</span><span class="si">%s</span><span class="s2">, empty=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="n">final_df</span><span class="p">,</span> <span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="n">final_df</span><span class="p">,</span> <span class="s2">&quot;empty&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Aggregation with DP mechanisms applied&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Reset index if group by is empty</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">group_by</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Resetting index (no group_by)&quot;</span><span class="p">)</span>
+            <span class="n">final_df</span> <span class="o">=</span> <span class="n">final_df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Handle empty DataFrame case</span>
+        <span class="k">if</span> <span class="n">final_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;final_df is empty; returning as-is&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">final_df</span>
+
+        <span class="c1"># Sort the final DataFrame based on ordering terms</span>
+        <span class="n">sort_keys</span><span class="p">,</span> <span class="n">sorted_orders</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sort_values_key</span><span class="p">(</span><span class="n">ordering_terms</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Sort keys=</span><span class="si">%s</span><span class="s2">, orders=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">sort_keys</span><span class="p">,</span> <span class="n">sorted_orders</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sort_keys</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">final_df</span> <span class="o">=</span> <span class="n">final_df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="n">sort_keys</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="n">sorted_orders</span><span class="p">)</span>
+
+        <span class="c1"># Apply limit and offset if specified</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Applying limit/offset: limit=</span><span class="si">%s</span><span class="s2">, offset=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">limit</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">limit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">offset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">final_df</span> <span class="o">=</span> <span class="n">final_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">offset</span> <span class="p">:</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">limit</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">final_df</span> <span class="o">=</span> <span class="n">final_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:</span><span class="n">limit</span><span class="p">]</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Backend execute_sql done&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">final_df</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_sort_values_key</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">ordering_terms</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">bool</span><span class="p">]]:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Building sort keys from ordering_terms=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">ordering_terms</span><span class="p">)</span>
+        <span class="n">keys</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">orders</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">ordering_terms</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">term</span><span class="p">[</span><span class="s2">&quot;column_name&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Missing `column_name` in ordering term: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">term</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">ExecutionBackendError</span><span class="p">(</span>
+                    <span class="s2">&quot;Missing `column_name` in ordering term&quot;</span><span class="p">,</span>
+                    <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;term&quot;</span><span class="p">:</span> <span class="n">term</span><span class="p">},</span>
+                    <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Specify column_name in each ORDER BY term&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="n">keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">term</span><span class="p">[</span><span class="s2">&quot;column_name&quot;</span><span class="p">])</span>
+            <span class="n">orders</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">term</span><span class="p">[</span><span class="s2">&quot;order&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">term</span><span class="p">[</span><span class="s2">&quot;order&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ASC&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Sort keys built: keys=</span><span class="si">%s</span><span class="s2">, orders=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">keys</span><span class="p">,</span> <span class="n">orders</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">keys</span><span class="p">,</span> <span class="n">orders</span>
+
+<div class="viewcode-block" id="SQLBackend.create_inner_df">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLBackend.create_inner_df">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_inner_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inner_sql</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrameLike</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create the intermediate DataFrame.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sql (str): The SQL query to execute.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            DataFrameLike: The intermediate DataFrame.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Subclasses must implement this method&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SQLBackend.contribution_bound">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLBackend.contribution_bound">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">contribution_bound</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">inner_df</span><span class="p">:</span> <span class="n">DataFrameLike</span><span class="p">,</span>
+        <span class="n">privacy_unit</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">params</span><span class="p">:</span> <span class="n">DPParams</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrameLike</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply contribution bounding to the intermediate DataFrame.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            inner_df (DataFrameLike): The intermediate DataFrame.</span>
+<span class="sd">            privacy_unit (str): The column name to use as the privacy unit.</span>
+<span class="sd">            params (DPParams): The differential privacy parameters to use.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            DataFrameLike: The filtered DataFrame.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Subclasses must implement this method&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SQLBackend.create_final_df">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLBackend.create_final_df">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_final_df</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">filtered_df</span><span class="p">:</span> <span class="n">DataFrameLike</span><span class="p">,</span>
+        <span class="n">agg_columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">AggregationColumn</span><span class="p">],</span>
+        <span class="n">group_by</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">sigmas</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+        <span class="n">clipping_thresholds</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create the final DataFrame with noisy aggregation applied.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filtered_df (DataFrameLike): The filtered DataFrame.</span>
+<span class="sd">            agg_columns (list[AggregationColumn]):</span>
+<span class="sd">                The list of aggregation columns to use.</span>
+<span class="sd">            group_by (list[str]): The list of columns to group by.</span>
+<span class="sd">            sigmas (list[float]): The list of noise standard deviations</span>
+<span class="sd">                for each aggregation.</span>
+<span class="sd">            clipping_thresholds (list[list[tuple[float, float]] | None]):</span>
+<span class="sd">                The list of clipping thresholds for each aggregation column.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The final DataFrame with DP mechanisms applied.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Construct the final DataFrame</span>
+        <span class="n">final_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">agg_column</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">agg_columns</span><span class="p">):</span>
+            <span class="c1"># Create strategy using Factory</span>
+            <span class="n">strategy</span> <span class="o">=</span> <span class="n">AggregationFactory</span><span class="o">.</span><span class="n">create_strategy</span><span class="p">(</span>
+                <span class="n">agg_column</span><span class="o">.</span><span class="n">aggregation_type</span><span class="p">,</span> <span class="bp">self</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Compute single aggregation</span>
+            <span class="n">result_series</span> <span class="o">=</span> <span class="n">strategy</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span>
+                <span class="n">filtered_df</span><span class="p">,</span>
+                <span class="n">agg_column</span><span class="p">,</span>
+                <span class="n">group_by</span><span class="p">,</span>
+                <span class="n">sigmas</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                <span class="n">clipping_thresholds</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+            <span class="p">)</span>
+            <span class="c1"># Get column name for the aggregation result</span>
+            <span class="n">column_name</span> <span class="o">=</span> <span class="n">strategy</span><span class="o">.</span><span class="n">get_column_name</span><span class="p">(</span><span class="n">agg_column</span><span class="p">)</span>
+
+            <span class="c1"># Add result to DataFrame</span>
+            <span class="n">final_df</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_series</span>
+
+        <span class="k">return</span> <span class="n">final_df</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_sensitivities</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">agg_columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">AggregationColumn</span><span class="p">],</span> <span class="n">params</span><span class="p">:</span> <span class="n">DPParams</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate sensitivities for all aggregation columns.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            agg_columns (list[AggregationColumn]):</span>
+<span class="sd">                The list of aggregation columns to use.</span>
+<span class="sd">            params (DPParams): The differential privacy parameters to use.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            list[float]: The list of sensitivities for each aggregation column.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">agg_column</span><span class="o">.</span><span class="n">aggregation_type</span><span class="o">.</span><span class="n">get_sensitivity</span><span class="p">(</span>
+                <span class="n">params</span><span class="o">.</span><span class="n">contribution_bound</span><span class="p">,</span> <span class="n">clipping_threshold</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">agg_column</span><span class="p">,</span> <span class="n">clipping_threshold</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+                <span class="n">agg_columns</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">clipping_thresholds</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+
+<div class="viewcode-block" id="SQLBackend.apply_aggregation">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLBackend.apply_aggregation">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">apply_aggregation</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">agg_type</span><span class="p">:</span> <span class="n">Aggregation</span><span class="p">,</span>
+        <span class="n">column_name</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">df</span><span class="p">:</span> <span class="n">DataFrameLike</span><span class="p">,</span>
+        <span class="n">group_by</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">clipping_threshold</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply noisy aggregation to the DataFrame.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            agg_type (Aggregation): The type of aggregation to apply.</span>
+<span class="sd">            column_name (list[str]): The column name(s) to aggregate.</span>
+<span class="sd">            df (DataFrame): The DataFrame to aggregate.</span>
+<span class="sd">            group_by (list[str]): The list of columns to group by.</span>
+<span class="sd">            clipping_threshold (list[tuple[float, float]] | None):</span>
+<span class="sd">                The clipping thresholds for each column.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            DataFrame: The DataFrame with aggregation applied.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Subclasses must implement this method&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SQLBackend.key_selection">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLBackend.key_selection">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">key_selection</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">filtered_df</span><span class="p">:</span> <span class="n">DataFrameLike</span><span class="p">,</span>
+        <span class="n">group_by</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">privacy_unit</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">min_frequency</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">tau</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform key selection (tau-thresholding) to determine which keys to keep.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filtered_df (DataFrameLike): The filtered DataFrame.</span>
+<span class="sd">            group_by (list[str]): The list of columns to group by.</span>
+<span class="sd">            privacy_unit (str): The column name to use as the privacy unit.</span>
+<span class="sd">            min_frequency (int): The threshold for first thresholding</span>
+<span class="sd">              before adding noise. It satisfies minimum frequency rule.</span>
+<span class="sd">            sigma (float): The standard deviation</span>
+<span class="sd">                for the Gaussian mechanism before the second thresholding.</span>
+<span class="sd">            tau (float): The threshold for second thresholding after adding noise.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[tuple[str, ...]]: List containing</span>
+<span class="sd">            the selected keys that pass the threshold.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">raw_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply_aggregation</span><span class="p">(</span>
+            <span class="n">Aggregation</span><span class="o">.</span><span class="n">COUNT_DISTINCT</span><span class="p">,</span> <span class="p">[</span><span class="n">privacy_unit</span><span class="p">],</span> <span class="n">filtered_df</span><span class="p">,</span> <span class="n">group_by</span>
+        <span class="p">)</span>
+        <span class="n">noisy_count</span> <span class="o">=</span> <span class="n">raw_count</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">secure_gauss</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">sigma</span><span class="p">))</span>
+        <span class="n">selected_keys_series</span> <span class="o">=</span> <span class="n">noisy_count</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">raw_count</span> <span class="o">&gt;=</span> <span class="n">min_frequency</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">noisy_count</span> <span class="o">&gt;=</span> <span class="n">tau</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="c1"># Ensure each key is a tuple, even if index is a single column</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">key</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">key</span><span class="p">,)</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">selected_keys_series</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="SQLBackend.filter_by_selected_keys">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLBackend.filter_by_selected_keys">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter_by_selected_keys</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="n">DataFrameLike</span><span class="p">,</span>
+        <span class="n">group_by</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">selected_keys</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrameLike</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Filter DataFrame to only include records with selected keys.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            df (DataFrameLike): The DataFrame to filter.</span>
+<span class="sd">            group_by (list[str]): The list of columns to group by.</span>
+<span class="sd">            selected_keys (list[tuple[str, ...]]): List containing the selected keys.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            DataFrameLike: The filtered DataFrame.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Subclasses must implement this method&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SQLBackend.get_table_name">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLBackend.get_table_name">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_table_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the list of tables in the database.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[str]: The list of table names.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Subclasses must implement this method&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SQLBackend.use_database">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLBackend.use_database">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">use_database</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Use a database.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            database_name (str): The name of the database to use.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Subclasses must implement this method&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SQLBackend.get_column_name">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLBackend.get_column_name">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_column_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the list of columns in the table.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            table_name (str): The name of the table.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[str]: The list of column names.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Subclasses must implement this method&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SQLBackend.create_temporary_table">
+<a class="viewcode-back" href="../../../backend.html#dpsql.backend.SQLBackend.create_temporary_table">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_temporary_table</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a temporary table in the database.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            df (DataFrame): The DataFrame to create the temporary table from.</span>
+<span class="sd">            table_name (str): The name of the temporary table.</span>
+<span class="sd">            index (bool): Whether to include the index as</span>
+<span class="sd">                a column in the temporary table.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Subclasses must implement this method&quot;</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

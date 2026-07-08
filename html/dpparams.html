@@ -1,0 +1,286 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DPParams &mdash; DPSQL+  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Validator" href="validator.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            DPSQL+
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="accountant.html">Accountant</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backend.html">Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="engine.html">Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validator.html">Validator</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">DPParams</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#dpsql.dp_params.DPParams"><code class="docutils literal notranslate"><span class="pre">DPParams</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.dp_params.DPParams.accountant_class"><code class="docutils literal notranslate"><span class="pre">DPParams.accountant_class</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.dp_params.DPParams.clipping_thresholds"><code class="docutils literal notranslate"><span class="pre">DPParams.clipping_thresholds</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.dp_params.DPParams.contribution_bound"><code class="docutils literal notranslate"><span class="pre">DPParams.contribution_bound</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.dp_params.DPParams.delta"><code class="docutils literal notranslate"><span class="pre">DPParams.delta</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.dp_params.DPParams.epsilon"><code class="docutils literal notranslate"><span class="pre">DPParams.epsilon</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.dp_params.DPParams.get_noise_parameters"><code class="docutils literal notranslate"><span class="pre">DPParams.get_noise_parameters()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.dp_params.DPParams.min_frequency"><code class="docutils literal notranslate"><span class="pre">DPParams.min_frequency</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.dp_params.DPParams.sigma_for_thresholding"><code class="docutils literal notranslate"><span class="pre">DPParams.sigma_for_thresholding</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.dp_params.DPParams.sigmas"><code class="docutils literal notranslate"><span class="pre">DPParams.sigmas</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.dp_params.DPParams.tau"><code class="docutils literal notranslate"><span class="pre">DPParams.tau</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#dpsql.dp_params.generate_dpparams"><code class="docutils literal notranslate"><span class="pre">generate_dpparams()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DPSQL+</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">DPParams</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/dpparams.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="dpparams">
+<h1>DPParams<a class="headerlink" href="#dpparams" title="Link to this heading"></a></h1>
+<p>The DPParams class provides a set of configurable parameters for Differential Privacy (DP) mechanisms in DPSQL+.
+This includes setting the noise level, which determines the privacy parameters epsilon and delta.</p>
+<p>The DPParams class provides two options for determining the amount of noise added to query results:</p>
+<ol class="arabic simple">
+<li><p><strong>sigmas, tau, and sigma_for_thresholding</strong>: Initializing with these parameters allows you to directly set the standard deviation of the noise added to each aggregation function and the parameters for tau-thresholding. <strong>This option is deprecated but still supported for debugging purposes (e.g., removing noise by setting sigmas to 0). We recommend using epsilon and delta instead.</strong></p></li>
+<li><p><strong>epsilon and delta</strong>: Setting epsilon and delta allows DPSQL+ to automatically calculate the appropriate noise parameters. The privacy budget (epsilon and delta) is distributed among the aggregation functions and tau-thresholding based on the selected accountant mechanism.</p></li>
+</ol>
+<p>Regardless of which option you choose, you need to set the following parameters:</p>
+<ol class="arabic">
+<li><p><strong>contribution_bound</strong>: This parameter limits the maximum number of rows that a single user can contribute to the aggregation. This is essential for ensuring differential privacy by bounding the influence of any individual user on the query results.</p></li>
+<li><p><strong>clipping_thresholds</strong>: This parameter specifies the range [L, U] for clipping input data for each aggregation function. This is important for bounding the sensitivity of the query. <code class="docutils literal notranslate"><span class="pre">None</span></code> is allowed only for <code class="docutils literal notranslate"><span class="pre">COUNT</span></code> and <code class="docutils literal notranslate"><span class="pre">COUNT_DISTINCT</span></code> aggregations.</p></li>
+<li><p><strong>min_frequency</strong>: This parameter sets the minimum number of users required for a query result to be released. This parameter works in conjunction with tau-thresholding to ensure that results are only shown when they represent a sufficient number of individuals, providing an additional layer of privacy protection beyond differential privacy.</p></li>
+<li><p><strong>accountant_class</strong> (Optional): This parameter specifies which privacy accountant to use for splitting noise parameters. Available options include:</p>
+<ul class="simple">
+<li><p><strong>None</strong> (default): Uses basic composition and allocates <code class="docutils literal notranslate"><span class="pre">epsilon/(n+1)</span></code> to each aggregation function and tau-thresholding, where <code class="docutils literal notranslate"><span class="pre">n</span></code> is the number of aggregation functions.</p></li>
+<li><p><strong>RenyiAccountant</strong>: Uses Renyi DP composition for tighter privacy budget allocation.</p></li>
+<li><p><strong>PLDAccountant</strong>: Uses Privacy Loss Distribution for tighter privacy budget allocation.</p></li>
+</ul>
+<p>Using advanced accountants like RenyiAccountant or PLDAccountant can significantly reduce the amount of noise needed for the same privacy guarantees, improving utility.</p>
+</li>
+</ol>
+<p>When using epsilon and delta instead of directly specifying noise parameters, DPSQL+ calculates the values based on the parameters in DPParams and the types of aggregation functions before executing the query.
+The calculation process is as follows:</p>
+<ol class="arabic simple">
+<li><p>The privacy budget (epsilon, delta) is divided equally among the aggregation functions and tau-thresholding.
+If an accountant_class is specified, it is used to optimize privacy budget allocation for better utility while maintaining the same privacy guarantees.</p></li>
+<li><p>For each aggregation function, the sensitivity is calculated based on the contribution_bound and clipping_thresholds.
+The sensitivity represents the maximum impact a single user can have on the query result.</p></li>
+<li><p>Using the allocated privacy budget and the sensitivity, the appropriate sigma for each aggregation function is calculated using the analytic Gaussian mechanism.
+This ensures that the noise added to each aggregation function satisfies the differential privacy guarantee.</p></li>
+<li><p>For tau-thresholding, the parameters tau and sigma_for_thresholding are calculated based on the allocated privacy budget, contribution_bound, and min_frequency.
+Tau-thresholding ensures that query results are only released when they are based on a sufficient number of users, further enhancing privacy protection.</p></li>
+</ol>
+<p>The DPParams class provides methods to perform these calculations:</p>
+<ul class="simple">
+<li><p><strong>get_noise_parameters(sensitivities)</strong>: Calculates and returns all noise parameters (sigmas, tau, sigma_for_thresholding) based on the sensitivities of the aggregation functions. This method uses the specified accountant_class (if provided) to optimize the noise parameters for better utility while maintaining the same privacy guarantees.</p></li>
+</ul>
+<p>This method ensures that the privacy budget is properly allocated and that the noise added to the query results satisfies the differential privacy guarantee.</p>
+<dl class="py class" id="module-dpsql.dp_params">
+<dt class="sig sig-object py" id="dpsql.dp_params.DPParams">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dpsql.dp_params.</span></span><span class="sig-name descname"><span class="pre">DPParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contribution_bound</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clipping_thresholds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_frequency</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigmas</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tau</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_for_thresholding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">accountant_class</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">type</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="accountant.html#dpsql.accountant.Accountant" title="dpsql.accountant.Accountant"><span class="pre">Accountant</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dpsql/dp_params.html#DPParams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.dp_params.DPParams" title="Link to this definition"></a></dt>
+<dd><p>Parameters for differential privacy.
+Either of (epsilon, delta) or (sigmas, tau, sigma_for_thresholding)
+must be provided.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>contribution_bound</strong> (<em>int</em>) – The maximum number of records that
+can be contributed by a single privacy unit.</p></li>
+<li><p><strong>clipping_thresholds</strong> (<em>list</em><em>[</em><em>list</em><em>[</em><em>tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>]</em><em>] </em><em>| </em><em>None</em><em>]</em>) – The list of clipping parameters for input data,
+used to clip the input within the range [L, U] where each tuple is (L, U).
+Each element is either None (for COUNT/COUNT_DISTINCT)
+or a list of clipping thresholds
+for each column in a multi-column aggregation.</p></li>
+<li><p><strong>min_frequency</strong> (<em>int</em>) – The threshold for first thresholding before adding noise.
+It satisfies minimum frequency rule. (Default: 1)</p></li>
+<li><p><strong>epsilon</strong> (<em>float</em>) – The privacy budget for the query.</p></li>
+<li><p><strong>delta</strong> (<em>float</em>) – The probability of failure for the privacy guarantee.</p></li>
+<li><p><strong>sigmas</strong> (<em>list</em><em>[</em><em>float</em><em>]</em>) – The standard deviations for the Gaussian mechanism.
+Deprecated: Use epsilon and delta instead.</p></li>
+<li><p><strong>tau</strong> (<em>float</em>) – The threshold for second thresholding after adding noise.
+It is expected to be greater than or equal to min_frequency.
+Deprecated: Use epsilon and delta instead.</p></li>
+<li><p><strong>sigma_for_thresholding</strong> (<em>float</em>) – The standard deviation
+for the Gaussian mechanism before the second thresholding.
+Deprecated: Use epsilon and delta instead.</p></li>
+<li><p><strong>accountant_class</strong> (<em>type</em><em>[</em><a class="reference internal" href="accountant.html#dpsql.accountant.Accountant" title="dpsql.accountant.Accountant"><em>Accountant</em></a><em>]</em>) – The privacy accountant class
+to use for calculating tight privacy budget allocation.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dpsql.dp_params.DPParams.accountant_class">
+<span class="sig-name descname"><span class="pre">accountant_class</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">type</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="accountant.html#dpsql.accountant.Accountant" title="dpsql.accountant.Accountant"><span class="pre">Accountant</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#dpsql.dp_params.DPParams.accountant_class" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dpsql.dp_params.DPParams.clipping_thresholds">
+<span class="sig-name descname"><span class="pre">clipping_thresholds</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#dpsql.dp_params.DPParams.clipping_thresholds" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dpsql.dp_params.DPParams.contribution_bound">
+<span class="sig-name descname"><span class="pre">contribution_bound</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#dpsql.dp_params.DPParams.contribution_bound" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dpsql.dp_params.DPParams.delta">
+<span class="sig-name descname"><span class="pre">delta</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#dpsql.dp_params.DPParams.delta" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dpsql.dp_params.DPParams.epsilon">
+<span class="sig-name descname"><span class="pre">epsilon</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#dpsql.dp_params.DPParams.epsilon" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.dp_params.DPParams.get_noise_parameters">
+<span class="sig-name descname"><span class="pre">get_noise_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sensitivities</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/dpsql/dp_params.html#DPParams.get_noise_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.dp_params.DPParams.get_noise_parameters" title="Link to this definition"></a></dt>
+<dd><p>Get the noise parameters (sigmas, tau, sigma_for_thresholding).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>sensitivities</strong> (<em>list</em><em>[</em><em>float</em><em>]</em>) – The sensitivities of the aggregation functions.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The noise parameters
+(sigmas, tau, sigma_for_thresholding).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[list[float], float, float]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dpsql.dp_params.DPParams.min_frequency">
+<span class="sig-name descname"><span class="pre">min_frequency</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#dpsql.dp_params.DPParams.min_frequency" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dpsql.dp_params.DPParams.sigma_for_thresholding">
+<span class="sig-name descname"><span class="pre">sigma_for_thresholding</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#dpsql.dp_params.DPParams.sigma_for_thresholding" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dpsql.dp_params.DPParams.sigmas">
+<span class="sig-name descname"><span class="pre">sigmas</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#dpsql.dp_params.DPParams.sigmas" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dpsql.dp_params.DPParams.tau">
+<span class="sig-name descname"><span class="pre">tau</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#dpsql.dp_params.DPParams.tau" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dpsql.dp_params.generate_dpparams">
+<span class="sig-prename descclassname"><span class="pre">dpsql.dp_params.</span></span><span class="sig-name descname"><span class="pre">generate_dpparams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">privacy_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">agg_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">AggregationColumn</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><span class="pre">DPParams</span></a></span></span><a class="reference internal" href="_modules/dpsql/dp_params.html#generate_dpparams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.dp_params.generate_dpparams" title="Link to this definition"></a></dt>
+<dd><p>Generate dpparams from privacy_params, agg_func and parameters_list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>privacy_params</strong> (<em>dict</em>) – The privacy parameters. {“EPSILON”: float,
+“DELTA”: float, “CONTRIBUTION_BOUND”: int, “MIN_FREQUENCY”: int}</p></li>
+<li><p><strong>agg_columns</strong> (<em>list</em><em>[</em><em>AggregationColumn</em><em>]</em>) – The list of aggregation columns.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The dpparams.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams">DPParams</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="validator.html" class="btn btn-neutral float-left" title="Validator" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
