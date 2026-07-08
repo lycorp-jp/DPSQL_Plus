@@ -1,4 +1,5 @@
 import logging
+import re
 
 from pandas import DataFrame
 
@@ -15,6 +16,10 @@ from ..errors import (
 from ..validator import Validator
 
 logger = logging.getLogger(__name__)
+
+_SAFE_TEMPORARY_TABLE_NAME = re.compile(
+    r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$"
+)
 
 
 class Engine:
@@ -223,6 +228,7 @@ class Engine:
 
         logger.info("Backend execution succeeded")
         if temporary_table_name is not None:
+            self._validate_temporary_table_name(temporary_table_name)
             logger.info("Creating temporary table: %s", temporary_table_name)
             try:
                 self.sql_backend.create_temporary_table(result, temporary_table_name)
@@ -233,3 +239,15 @@ class Engine:
         self.accountant.update_budget(agg_funcs, dpparams)
         logger.info("Privacy budget updated")
         return result
+
+    def _validate_temporary_table_name(self, temporary_table_name: str) -> None:
+        if _SAFE_TEMPORARY_TABLE_NAME.fullmatch(temporary_table_name):
+            return
+        raise EngineError(
+            "Invalid temporary table name",
+            context={"temporary_table_name": temporary_table_name},
+            hint=(
+                "Use dot-separated identifiers containing only letters, "
+                "numbers, and underscores"
+            ),
+        )

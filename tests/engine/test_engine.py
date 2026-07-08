@@ -214,6 +214,39 @@ def test_execute_query_success(mocker: MockerFixture, setup_engine):
     assert_dataframe_equal(result, expected_result)
 
 
+def test_execute_query_rejects_invalid_temporary_table_name(
+    mocker: MockerFixture, setup_engine
+):
+    engine, accountant, sql_backend, validator, dpparams, spark = setup_engine
+
+    query = "SELECT COUNT(*) FROM db.table"
+    intermediate_privacy_unit = "privacy_unit"
+    schema = StructType([StructField("column", IntegerType(), True)])
+    expected_result = spark.createDataFrame([(1,)], schema)
+    agg_column = AggregationColumn(
+        aggregation_type=Aggregation.COUNT, columns=["*"], alias=None, parameters=[]
+    )
+
+    validator.validate_and_get_final_select_items.return_value = (
+        intermediate_privacy_unit,
+        "SELECT * FROM db.table",
+        [agg_column],
+        [],
+        [],
+        None,
+        None,
+        None,
+    )
+    accountant.check_budget.return_value = True
+    sql_backend.execute_sql.return_value = expected_result
+
+    with pytest.raises(EngineError, match="Invalid temporary table name"):
+        engine.execute_query(query, dpparams, "bad;temp")
+
+    sql_backend.create_temporary_table.assert_not_called()
+    accountant.update_budget.assert_not_called()
+
+
 def test_execute_query_validation_failure(setup_engine):
     engine, _, _, validator, dpparams, _ = setup_engine
 

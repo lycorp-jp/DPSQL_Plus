@@ -1,4 +1,5 @@
 import logging
+import re
 
 import duckdb
 import pandas as pd
@@ -15,6 +16,16 @@ from ..utils import safely_get_threshold
 from .sql_backend import DataFrameLike, SQLBackend
 
 logger = logging.getLogger(__name__)
+
+_SAFE_TEMP_TABLE_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _quote_identifier(identifier: str) -> str:
+    quoted_parts: list[str] = []
+    for identifier_part in identifier.split("."):
+        escaped_part = identifier_part.replace('"', '""')
+        quoted_parts.append(f'"{escaped_part}"')
+    return ".".join(quoted_parts)
 
 
 class DuckDBBackend(SQLBackend):
@@ -233,7 +244,17 @@ class DuckDBBackend(SQLBackend):
 
     def get_column_name(self, table_name: str) -> list[str]:
         logger.debug("DuckDB get_column_name: table=%s", table_name)
-        columns = self.conn.execute(f"DESCRIBE {table_name}").fetchall()
+        try:
+            columns = self.conn.execute(
+                f"DESCRIBE {_quote_identifier(table_name)}"
+            ).fetchall()
+        except Exception as e:  # noqa
+            raise ExecutionBackendError(
+                "Failed to describe table",
+                context={"table": table_name},
+                hint="Verify the relation name exists and is a valid identifier",
+                cause=e,
+            ) from e
         return [column[0] for column in columns]
 
     def create_temporary_table(
@@ -242,5 +263,31 @@ class DuckDBBackend(SQLBackend):
         logger.info(
             "DuckDB create_temporary_table: table=%s index=%s", table_name, index
         )
+        if not _SAFE_TEMP_TABLE_NAME.fullmatch(table_name):
+            raise ExecutionBackendError(
+                "Invalid temporary table name",
+                context={"table_name": table_name},
+                hint=(
+                    "Use only letters, numbers, and underscores, and start "
+                    "with a letter or underscore"
+                ),
+            )
+        if table_name in self.get_table_name():
+            raise ExecutionBackendError(
+                "Temporary table name already exists",
+                context={"table_name": table_name},
+                hint=(
+                    "Choose a new temporary table name that does not collide "
+                    "with an existing relation"
+                ),
+            )
         temp_df = df.reset_index() if index else df
-        self.conn.register(table_name, temp_df)
+        try:
+            self.conn.register(table_name, temp_df)
+        except Exception as e:  # noqa
+            raise ExecutionBackendError(
+                "Failed to create temporary table",
+                context={"table_name": table_name, "index_included": index},
+                hint="Check the DataFrame schema and temporary table name",
+                cause=e,
+            ) from e
