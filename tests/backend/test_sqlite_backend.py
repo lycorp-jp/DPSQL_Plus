@@ -155,6 +155,25 @@ def test_get_column_name(conn):
             assert column_name == ["columnA", "columnB"]
 
 
+def test_get_column_name_escapes_quotes(conn):
+    cursor = conn.cursor()
+    cursor.execute('CREATE TABLE "odd\'name" (safe_column INT)')
+
+    backend = SQLiteBackend(conn)
+
+    assert backend.get_column_name("odd'name") == ["safe_column"]
+
+
+def test_get_column_name_rejects_injected_identifier(conn):
+    cursor = conn.cursor()
+    cursor.execute("CREATE TABLE table1 (safe_column INT)")
+
+    backend = SQLiteBackend(conn)
+
+    assert backend.get_column_name("table1'; CREATE TABLE hacked(z INT); --") == []
+    assert backend.get_table_name() == ["table1"]
+
+
 def test_is_inmemory_db():
     conn = sqlite3.connect(":memory:")
     backend = SQLiteBackend(conn)

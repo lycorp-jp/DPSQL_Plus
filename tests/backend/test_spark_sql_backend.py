@@ -13,6 +13,7 @@ from utils import create_test_cases
 
 from dpsql.backend import SparkSQLBackend
 from dpsql.dp_params import DPParams
+from dpsql.errors import ExecutionBackendError
 
 
 @pytest.fixture(scope="function")
@@ -186,6 +187,19 @@ def test_get_column_name(spark):
             assert column_name == ["columnA", "columnB"]
 
 
+def test_get_column_name_rejects_injected_identifier(spark):
+    backend = SparkSQLBackend(spark)
+    spark.sql("DROP DATABASE IF EXISTS db1 CASCADE")
+    spark.sql("CREATE DATABASE db1")
+    backend.use_database("db1")
+    spark.sql("CREATE TABLE table1 (safe_column INT)")
+
+    with pytest.raises(ExecutionBackendError):
+        backend.get_column_name("table1; DROP TABLE table1")
+
+    assert backend.get_column_name("table1") == ["safe_column"]
+
+
 def test_create_temporary_table(spark):
     backend = SparkSQLBackend(spark)
 
@@ -221,3 +235,23 @@ def test_create_temporary_table(spark):
         "attribute",
         "value",
     ]
+
+
+def test_create_temporary_table_rejects_invalid_name(spark):
+    backend = SparkSQLBackend(spark)
+    df = pd.DataFrame([(1,)], columns=["id"])
+
+    with pytest.raises(ExecutionBackendError):
+        backend.create_temporary_table(df, "x; DROP VIEW hacked", False)
+
+
+def test_create_temporary_table_rejects_name_collision(spark):
+    backend = SparkSQLBackend(spark)
+    spark.sql("DROP DATABASE IF EXISTS db1 CASCADE")
+    spark.sql("CREATE DATABASE db1")
+    backend.use_database("db1")
+    spark.sql("CREATE TABLE existing_table (id INT)")
+    df = pd.DataFrame([(1,)], columns=["id"])
+
+    with pytest.raises(ExecutionBackendError):
+        backend.create_temporary_table(df, "existing_table", False)

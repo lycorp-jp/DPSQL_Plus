@@ -14,6 +14,11 @@ from .sql_backend import DataFrameLike, SQLBackend
 logger = logging.getLogger(__name__)
 
 
+def _quote_pragma_literal(identifier: str) -> str:
+    escaped_identifier = identifier.replace("'", "''")
+    return f"'{escaped_identifier}'"
+
+
 class SQLiteBackend(SQLBackend):
     """
     Backend for executing SQLite queries with differential privacy mechanisms.
@@ -184,7 +189,9 @@ class SQLiteBackend(SQLBackend):
 
     def get_column_name(self, table_name: str) -> list[str]:
         logger.debug("SQLite get_column_name: table=%s", table_name)
-        cursor = self.conn.execute(f"PRAGMA table_info('{table_name}');")
+        cursor = self.conn.execute(
+            f"PRAGMA table_info({_quote_pragma_literal(table_name)});"
+        )
         # The info columns are typically: (cid, name, type, notnull, dflt_value, pk)
         return [row[1] for row in cursor.fetchall()]
 

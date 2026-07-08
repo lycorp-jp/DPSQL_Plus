@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import cast
 
 from pandas import DataFrame, Series
@@ -28,6 +29,13 @@ from ..utils import safely_get_threshold
 from .sql_backend import DataFrameLike, SQLBackend
 
 logger = logging.getLogger(__name__)
+
+_SAFE_TEMP_VIEW_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _quote_identifier(identifier: str) -> str:
+    escaped_identifier = identifier.replace("`", "``")
+    return f"`{escaped_identifier}`"
 
 
 class SparkSQLBackend(SQLBackend):
@@ -182,7 +190,7 @@ class SparkSQLBackend(SQLBackend):
                 hint="Provide a database name after USE",
             )
         try:
-            self.spark.sql(f"USE {database_name}")
+            self.spark.sql(f"USE {_quote_identifier(database_name)}")
         except Exception as e:  # noqa
             raise ExecutionBackendError(
                 "Failed to switch Spark database",
@@ -260,7 +268,9 @@ class SparkSQLBackend(SQLBackend):
         """
 
         try:
-            columns = self.spark.sql(f"DESCRIBE {table_name}").collect()
+            columns = self.spark.sql(
+                f"DESCRIBE {_quote_identifier(table_name)}"
+            ).collect()
         except Exception as e:  # noqa
             raise ExecutionBackendError(
                 "Failed to describe table",
@@ -276,6 +286,24 @@ class SparkSQLBackend(SQLBackend):
         logger.info(
             "Spark create_temporary_table: table=%s index=%s", table_name, index
         )
+        if not _SAFE_TEMP_VIEW_NAME.fullmatch(table_name):
+            raise ExecutionBackendError(
+                "Invalid temporary table name",
+                context={"table_name": table_name},
+                hint=(
+                    "Use only letters, numbers, and underscores, and start "
+                    "with a letter or underscore"
+                ),
+            )
+        if table_name in self.get_table_name():
+            raise ExecutionBackendError(
+                "Temporary table name already exists",
+                context={"table_name": table_name},
+                hint=(
+                    "Choose a new temporary table name that does not collide "
+                    "with an existing table or temp view"
+                ),
+            )
         try:
             spark_df = self.spark.createDataFrame(df.reset_index() if index else df)
             spark_df.createTempView(table_name)

@@ -84,6 +84,20 @@ def test_error_ctes_private_analyze():
 def test_error_ctes_private_analyze_join():
     query = """
         ALTER PRIVATE_TABLE ptbl OPTIONS (PRIVACY_UNIT_COLUMN = pcol);
+        WITH ptbl2 AS (
+            SELECT tbl.pcol
+            FROM tbl JOIN ptbl ON tbl.a = ptbl.a
+        )
+        SELECT COUNT(pcol) FROM ptbl2;
+    """
+    with pytest.raises(PrivacyConstraintError):
+        # Reason: CTE projects tbl.pcol, which only shares the column name.
+        # It is not the privacy unit column sourced from the private table ptbl.
+        parser = PrivSQLParser()
+        parser.analyze(query)
+
+    query = """
+        ALTER PRIVATE_TABLE ptbl OPTIONS (PRIVACY_UNIT_COLUMN = pcol);
         WITH ptbl2 AS (SELECT ptbl.pcol1, AVG(tbl.col) FROM
           ptbl JOIN tbl ON ptbl.pcol = tbl.pcol)
         SELECT col, COUNT(col), COUNT(DISTINCT col2) FROM

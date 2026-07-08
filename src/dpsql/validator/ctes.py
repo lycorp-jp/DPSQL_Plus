@@ -92,23 +92,56 @@ def _is_privacy_unit_column(
     return res
 
 
-def _is_include_privacy_unit_column(
-    column_names: list[str],
+def _qualifier_matches_table(
+    qualifier: str,
+    table_name: str,
+    table_alias: str | None,
+) -> bool:
+    logger.debug(
+        "_qualifier_matches_table: qualifier=%s table=%s alias=%s",
+        qualifier,
+        table_name,
+        table_alias,
+    )
+    return qualifier == table_name or (
+        table_alias is not None and qualifier == table_alias
+    )
+
+
+def _parser_references_privacy_unit_column(
+    parser: ResultColumnParser,
     privacy_unit_columns: dict[str | None, dict[str, str]],
     db_name: str | None,
     table_name: str,
+    table_alias: str | None,
 ) -> bool:
     logger.debug(
-        "_is_include_privacy_unit_column: db=%s table=%s columns=%s",
+        "_parser_references_privacy_unit_column: "
+        "db=%s table=%s alias=%s columns=%s qualifiers=%s",
         db_name,
         table_name,
-        column_names,
+        table_alias,
+        parser.column_names,
+        parser.table_names,
     )
-    for column_name in column_names:
-        if _is_privacy_unit_column(
-            column_name, privacy_unit_columns, db_name, table_name
+    qualifiers = parser.table_names
+    for i, column_name in enumerate(parser.column_names):
+        qualifier = qualifiers[i] if i < len(qualifiers) else None
+        if qualifier is not None and not _qualifier_matches_table(
+            qualifier, table_name, table_alias
         ):
-            logger.debug("Privacy unit column included: %s", column_name)
+            continue
+        if _is_privacy_unit_column(
+            column_name,
+            privacy_unit_columns,
+            db_name,
+            table_name,
+        ):
+            logger.debug(
+                "Parser references privacy unit column: qualifier=%s column=%s",
+                qualifier,
+                column_name,
+            )
             return True
     return False
 
@@ -120,6 +153,8 @@ def get_privacy_unit_column_with_privacy_check(
     join_db_name: str | None,
     from_table_name: str,
     join_table_name: str | None,
+    from_table_alias: str | None = None,
+    join_table_alias: str | None = None,
 ) -> str | None:
     logger.debug("Resolve privacy unit column with privacy check")
     logger.debug(
@@ -169,7 +204,8 @@ def get_privacy_unit_column_with_privacy_check(
                         join_db_name,
                         from_table_name,
                         join_table_name,
-                        node,
+                        from_table_alias,
+                        join_table_alias,
                         parser,
                     )
                 case "column_name_alias":
@@ -204,7 +240,8 @@ def _resolve_privacy_column_name(
     join_db_name: str | None,
     from_table_name: str,
     join_table_name: str | None,
-    node: Tree[Any],
+    from_table_alias: str | None,
+    join_table_alias: str | None,
     parser: ResultColumnParser,
 ) -> str | None:
     logger.debug(
@@ -217,15 +254,27 @@ def _resolve_privacy_column_name(
     )
     if join_table_name is None:
         privacy_unit_column_name = _get_privacy_unit_column_name(
-            privacy_unit_columns, from_db_name, from_table_name, node, parser
+            privacy_unit_columns,
+            from_db_name,
+            from_table_name,
+            from_table_alias,
+            parser,
         )
     else:
         privacy_unit_column_name = _get_privacy_unit_column_name(
-            privacy_unit_columns, from_db_name, from_table_name, node, parser
+            privacy_unit_columns,
+            from_db_name,
+            from_table_name,
+            from_table_alias,
+            parser,
         )
         if privacy_unit_column_name is None:
             privacy_unit_column_name = _get_privacy_unit_column_name(
-                privacy_unit_columns, join_db_name, join_table_name, node, parser
+                privacy_unit_columns,
+                join_db_name,
+                join_table_name,
+                join_table_alias,
+                parser,
             )
     logger.debug("_resolve_privacy_column_name -> %s", privacy_unit_column_name)
     return privacy_unit_column_name
@@ -235,7 +284,7 @@ def _get_privacy_unit_column_name(
     privacy_unit_columns: dict[str | None, dict[str, str]],
     db_name: str | None,
     table_name: str,
-    node: Tree[Any],
+    table_alias: str | None,
     parser: ResultColumnParser,
 ) -> str | None:
     logger.debug(
@@ -252,6 +301,16 @@ def _get_privacy_unit_column_name(
                 context={"columns": parser.column_names},
                 hint="Simplify the expression or remove extra columns",
             )
+        if len(parser.table_names) > 1:
+            raise QueryParseError(
+                "Expected at most one qualifier in pure result column",
+                context={"qualifiers": parser.table_names},
+                hint="Project a single qualified or unqualified column",
+            )
+        if parser.table_names and not _qualifier_matches_table(
+            parser.table_names[0], table_name, table_alias
+        ):
+            return None
         column_name = parser.column_names[0]
         privacy_unit_column_name = (
             column_name
@@ -264,11 +323,12 @@ def _get_privacy_unit_column_name(
             else None
         )
     else:
-        if _is_include_privacy_unit_column(
-            parser.column_names,
+        if _parser_references_privacy_unit_column(
+            parser,
             privacy_unit_columns,
             db_name,
             table_name,
+            table_alias,
         ):
             raise PrivacyConstraintError(
                 "Privacy unit column in composite expression is disallowed",
@@ -616,6 +676,8 @@ class SelectCoreParser(PrivacyChecker):
                 self._join_db_name,
                 self._from_table_name,
                 self._join_table_name,
+                self._from_table_name_alias,
+                self._join_table_name_alias,
             )
             if (
                 self._privacy_unit_column is not None

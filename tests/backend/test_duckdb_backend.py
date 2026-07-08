@@ -8,6 +8,7 @@ from utils import create_test_cases
 
 from dpsql.backend import DuckDBBackend
 from dpsql.dp_params import DPParams
+from dpsql.errors import ExecutionBackendError
 
 
 @pytest.fixture(scope="function")
@@ -161,6 +162,17 @@ def test_get_column_name(conn):
             assert column_name == ["columnA", "columnB"]
 
 
+def test_get_column_name_quotes_identifier(conn):
+    conn.execute("CREATE TABLE table1 (column1 INT)")
+    conn.execute('CREATE TABLE "table1; CREATE TABLE hacked(z INT)" (safe_column INT)')
+    backend = DuckDBBackend(conn)
+
+    assert backend.get_column_name("table1; CREATE TABLE hacked(z INT)") == [
+        "safe_column"
+    ]
+    assert "hacked" not in backend.get_table_name()
+
+
 def test_create_temporary_table_with_inmemory(conn):
     backend = DuckDBBackend(conn)
     df = pd.DataFrame(
@@ -195,6 +207,25 @@ def test_create_temporary_table_with_inmemory(conn):
         "attribute",
         "value",
     ]
+
+
+def test_create_temporary_table_rejects_invalid_name(conn):
+    backend = DuckDBBackend(conn)
+    df = pd.DataFrame([(1,)], columns=["id"])
+
+    with pytest.raises(ExecutionBackendError):
+        backend.create_temporary_table(df, "x; create table hacked(z int)", False)
+
+    assert "hacked" not in backend.get_table_name()
+
+
+def test_create_temporary_table_rejects_name_collision(conn):
+    conn.execute("CREATE TABLE existing_table (id INT)")
+    backend = DuckDBBackend(conn)
+    df = pd.DataFrame([(1,)], columns=["id"])
+
+    with pytest.raises(ExecutionBackendError):
+        backend.create_temporary_table(df, "existing_table", False)
 
 
 def test_create_temporary_table_with_file():
