@@ -38,7 +38,11 @@ class SQLiteBackend(SQLBackend):
         return pd.read_sql_query(inner_sql, self.conn)
 
     def contribution_bound(
-        self, inner_df: DataFrameLike, privacy_unit: str, params: DPParams
+        self,
+        inner_df: DataFrameLike,
+        privacy_unit: str,
+        params: DPParams,
+        priority_column: str,
     ) -> pd.DataFrame:
         logger.debug(
             "SQLite contribution_bound: privacy_unit=%s, bound=%s",
@@ -52,19 +56,25 @@ class SQLiteBackend(SQLBackend):
                 hint="Provide a pandas.DataFrame",
             )
 
-        # Randomly shuffle rows within each privacy unit
-        # and keep only up to contribution_bound rows
-        rng = np.random.default_rng()
-        randomized = inner_df.assign(_shuffle_rand=rng.random(len(inner_df)))
-        randomized = randomized.sort_values(by=[privacy_unit, "_shuffle_rand"])
+        # Rank contributions by the shared random priority within each privacy unit.
+        randomized = inner_df.sort_values(by=[privacy_unit, priority_column])
         grouped = randomized.groupby(privacy_unit, dropna=False, group_keys=False)
         filtered_df = randomized[grouped.cumcount() < params.contribution_bound]
-        filtered_df = filtered_df.drop(columns=["_shuffle_rand"])
         filtered_df = filtered_df.reset_index(drop=True)
         logger.debug(
             "SQLite contribution_bound: filtered_rows=%s", filtered_df.shape[0]
         )
         return filtered_df
+
+    def add_random_priority(self, df: DataFrameLike, column_name: str) -> pd.DataFrame:
+        if not isinstance(df, pd.DataFrame):
+            raise UnsupportedBackendError(
+                "Expected pandas DataFrame in SQLite backend",
+                context={"actual_type": type(df).__name__},
+                hint="Provide a pandas.DataFrame",
+            )
+        rng = np.random.default_rng()
+        return df.assign(**{column_name: rng.permutation(len(df))})
 
     def apply_aggregation(
         self,
@@ -179,6 +189,9 @@ class SQLiteBackend(SQLBackend):
                 hint="Ensure the upstream backend returns a pandas.DataFrame",
             )
 
+        if len(selected_keys) == 0:
+            # If no selected keys, return an empty DataFrame with the same columns
+            return df.iloc[0:0]
         if len(group_by) == 0:
             # If no group by columns, return the original DataFrame
             return df

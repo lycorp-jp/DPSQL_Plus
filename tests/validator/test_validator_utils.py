@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from unittest.mock import Mock
 
 import pytest
@@ -188,21 +189,29 @@ class TestParseLiteralValue:
 
 class TestIsPrivateTable:
     def test_is_private_table_db_not_in_privacy_columns(self):
-        privacy_unit_columns = {"db1": {"table1": "user_id"}}
+        privacy_unit_columns: Mapping[str | None, Mapping[str, str]] = {
+            "db1": {"table1": "user_id"}
+        }
         result = is_private_table_("db2", "table1", privacy_unit_columns)
         assert result is False
 
     def test_is_private_table_table_not_in_privacy_columns(self):
-        privacy_unit_columns = {"db1": {"table1": "user_id"}}
+        privacy_unit_columns: Mapping[str | None, Mapping[str, str]] = {
+            "db1": {"table1": "user_id"}
+        }
         result = is_private_table_("db1", "table2", privacy_unit_columns)
         assert result is False
 
     def test_is_private_table_table_in_privacy_columns(self):
-        privacy_unit_columns = {"db1": {"table1": "user_id"}}
+        privacy_unit_columns: Mapping[str | None, Mapping[str, str]] = {
+            "db1": {"table1": "user_id"}
+        }
         result = is_private_table_("db1", "table1", privacy_unit_columns)
         assert result is True
 
     def test_is_private_table_none_db_name(self):
-        privacy_unit_columns = {None: {"table1": "user_id"}}
+        privacy_unit_columns: Mapping[str | None, Mapping[str, str]] = {
+            None: {"table1": "user_id"}
+        }
         result = is_private_table_(None, "table1", privacy_unit_columns)
         assert result is True

@@ -22,7 +22,7 @@ def test_compute_pld():
     accountant = PLDAccountant(1.0, 0.1)
     sensitivities = [3.0]
     params = DPParams(
-        contribution_bound=2.0,
+        contribution_bound=2,
         tau=3.0,
         sigma_for_thresholding=1.0,
         sigmas=[3.0],
@@ -32,6 +32,10 @@ def test_compute_pld():
 
     pld = accountant._compute_pld(sensitivities, params)
     epsilon = pld.get_epsilon_for_delta(delta_0)
+
+    assert params.tau is not None
+    assert params.sigma_for_thresholding is not None
+    assert params.sigmas is not None
 
     # Basic composition
     pld_expected = calc_pld_for_tau_thresholding(
@@ -68,7 +72,7 @@ def test_compute_pld():
 def test_compute_pld_aggregations(aggregation, clipping_thresholds, sensitivities):
     accountant = PLDAccountant(1.0, 0.1)
     base_kwargs = {
-        "contribution_bound": 1.0,
+        "contribution_bound": 1,
         "sigma_for_thresholding": 1.0,
         "tau": 1.0,
         "sigmas": [1.0],
@@ -97,7 +101,7 @@ def test_calculate_min_epsilon():
 def test_check_budget():
     accountant = PLDAccountant(1.0, 0.1)
     params = DPParams(
-        contribution_bound=2.0,
+        contribution_bound=2,
         tau=3.0,
         sigma_for_thresholding=1.0,
         sigmas=[3.0],
@@ -119,7 +123,7 @@ def test_check_budget():
 def test_update_budget():
     accountant = PLDAccountant(1.0, 0.5)
     params = DPParams(
-        contribution_bound=1.0,
+        contribution_bound=1,
         sigma_for_thresholding=1.0,
         tau=1.0,
         sigmas=[1.0],
@@ -165,7 +169,7 @@ def test_remaining_queries(mocker):
         epsilon=total_epsilon / 2,
         delta=total_delta / 2,
         clipping_thresholds=[None],
-        contribution_bound=1.0,
+        contribution_bound=1,
     )
     accountant.update_budget([Aggregation.COUNT], params)
     remaining_after_update = accountant.remaining_queries(0.1, 0.05)

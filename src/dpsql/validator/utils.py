@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from lark.lexer import Token
@@ -207,7 +208,7 @@ def resolve_instance_3_values(
 
 
 def token_concat(
-    items: list[Token | Tree[Any]], sep: str = "_", is_type: bool = False
+    items: Sequence[Token | Tree[Any]], sep: str = "_", is_type: bool = False
 ) -> str:
     logger.debug("token_concat: count=%s sep='%s' is_type=%s", len(items), sep, is_type)
     items_iterator = iter(items)
@@ -268,13 +269,13 @@ def parse_literal_value(item: Tree[Any]) -> str:
 def is_private_table_(
     db_name: str | None,
     table_name: str | None,
-    privacy_unit_columns: dict[str | None, dict[str, str]],
+    privacy_unit_columns: Mapping[str | None, Mapping[str, str]],
 ) -> bool:
     """Check if the table is a private table.
     Args:
         db_name (str | None): The name of the database.
         table_name (str | None): The name of the table.
-        privacy_unit_columns (dict[str | None, dict[str, str]]): The privacy unit
+        privacy_unit_columns (Mapping[str | None, Mapping[str, str]]): The privacy unit
           columns of the database.
     Returns:
         bool: True if the table is a private table, False otherwise.

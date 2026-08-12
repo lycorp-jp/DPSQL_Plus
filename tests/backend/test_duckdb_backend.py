@@ -6,6 +6,7 @@ import polars as pl
 import pytest
 from utils import create_test_cases
 
+from dpsql.aggregation import Aggregation, AggregationColumn
 from dpsql.backend import DuckDBBackend
 from dpsql.dp_params import DPParams
 from dpsql.errors import ExecutionBackendError
@@ -86,7 +87,11 @@ def test_contribution_bound(conn, data, expected_count):
         clipping_thresholds=[None],
     )
 
-    filtered_df = backend.contribution_bound(data, "uid", params)
+    priority_column = "_priority"
+    prioritized_data = backend.add_random_priority(data, priority_column)
+    filtered_df = backend.contribution_bound(
+        prioritized_data, "uid", params, priority_column
+    )
     assert len(filtered_df) == expected_count
 
 
@@ -132,17 +137,100 @@ def test_contribution_bound(conn, data, expected_count):
             [],
             0,
         ),
+        (
+            pl.DataFrame({"id": [1, 2], "uid": ["uid1", "uid2"], "value": [10, 20]}),
+            [],
+            [],
+            0,
+        ),
     ],
     ids=[
         "single column filtering",
         "multi column filtering",
         "empty selected_keys case",
+        "no group by and empty selected_keys case",
     ],
 )
 def test_filter_by_selected_keys(conn, data, group_by, selected_keys, expected_count):
     backend = DuckDBBackend(conn)
     filtered_df = backend.filter_by_selected_keys(data, group_by, selected_keys)
     assert len(filtered_df) == expected_count
+
+
+def test_execute_sql_preserves_first_bounded_records(conn, mocker):
+    backend = DuckDBBackend(conn)
+    inner_df = pl.DataFrame(
+        {
+            "id": [1, 2, 3, 4],
+            "uid": ["uid1", "uid1", "uid1", "uid2"],
+            "group": ["A", "X", "A", "A"],
+            "value": [10, 20, 30, 40],
+            "priority": [0, 1, 2, 0],
+        }
+    )
+    mocker.patch.object(backend, "create_inner_df", return_value=inner_df)
+    mocker.patch.object(
+        backend,
+        "add_random_priority",
+        side_effect=lambda df, column: df.with_columns(
+            pl.col("priority").alias(column)
+        ),
+    )
+    create_final_df = mocker.patch.object(
+        backend,
+        "create_final_df",
+        return_value=pd.DataFrame({"count(value)": [3.0]}, index=["A"]),
+    )
+
+    backend.execute_sql(
+        privacy_unit="uid",
+        params=DPParams(
+            contribution_bound=2,
+            min_frequency=2,
+            sigma_for_thresholding=0,
+            tau=2,
+            sigmas=[0],
+            clipping_thresholds=[None],
+        ),
+        inner_sql="",
+        agg_columns=[AggregationColumn(Aggregation.COUNT, ["value"])],
+        group_by_columns=["group"],
+        ordering_terms=[],
+    )
+
+    final_filtered_df = create_final_df.call_args.args[0]
+    assert sorted(final_filtered_df["id"].to_list()) == [1, 3, 4]
+    assert "_dpsql_contribution_priority_" not in final_filtered_df.columns
+
+
+def test_execute_sql_suppresses_global_aggregation_below_min_frequency(conn, mocker):
+    backend = DuckDBBackend(conn)
+    inner_df = pl.DataFrame(
+        {
+            "id": [1, 2],
+            "uid": ["uid1", "uid2"],
+            "value": [10, 20],
+        }
+    )
+    mocker.patch.object(backend, "create_inner_df", return_value=inner_df)
+
+    result = backend.execute_sql(
+        privacy_unit="uid",
+        params=DPParams(
+            contribution_bound=1,
+            min_frequency=3,
+            sigma_for_thresholding=0,
+            tau=3,
+            sigmas=[0],
+            clipping_thresholds=[None],
+        ),
+        inner_sql="",
+        agg_columns=[AggregationColumn(Aggregation.COUNT, ["value"])],
+        group_by_columns=[],
+        ordering_terms=[],
+    )
+
+    assert result.empty
 
 
 def test_get_column_name(conn):
