@@ -26,15 +26,19 @@ agg_types = [
 
 class MockSQLBackend(SQLBackend):
     def create_inner_df(self, inner_sql):
-        pass
+        raise NotImplementedError()
 
     def contribution_bound(
         self,
         inner_df,
         privacy_unit,
         params,
+        priority_column,
     ):
-        pass
+        raise NotImplementedError()
+
+    def add_random_priority(self, df, column_name):
+        raise NotImplementedError()
 
     def apply_aggregation(
         self,
@@ -42,9 +46,9 @@ class MockSQLBackend(SQLBackend):
         column_name,
         df,
         group_by,
-        clipping_threshold,
+        clipping_threshold=None,
     ):
-        pass
+        raise NotImplementedError()
 
     def filter_by_selected_keys(
         self,
@@ -52,18 +56,18 @@ class MockSQLBackend(SQLBackend):
         group_by,
         selected_keys,
     ):
-        pass
+        raise NotImplementedError()
 
     def get_table_name(self):
-        pass
+        raise NotImplementedError()
 
     def use_database(self, database_name):
         pass
 
     def get_column_name(self, table_name):
-        pass
+        raise NotImplementedError()
 
-    def create_temporary_table(self, df, table_name, index):
+    def create_temporary_table(self, df, table_name, index=True):
         pass
 
 
@@ -88,10 +92,20 @@ def test_execute_sql(mocker):
     )
 
     # Mock the methods called within execute_sql
-    mocker.patch.object(backend, "create_inner_df", return_value=None)
-    mocker.patch.object(backend, "contribution_bound", return_value=None)
+    inner_df = pd.DataFrame(columns=["privacy_unit", "attribute", "value"])
+    mocker.patch.object(backend, "create_inner_df", return_value=inner_df)
+    mocker.patch.object(
+        backend,
+        "add_random_priority",
+        side_effect=lambda df, column: df.assign(**{column: pd.Series(dtype=int)}),
+    )
+    mocker.patch.object(
+        backend, "contribution_bound", side_effect=lambda df, *_args: df
+    )
     mocker.patch.object(backend, "key_selection", return_value=None)
-    mocker.patch.object(backend, "filter_by_selected_keys", return_value=None)
+    mocker.patch.object(
+        backend, "filter_by_selected_keys", side_effect=lambda df, *_args: df
+    )
     mocker.patch.object(backend, "create_final_df", return_value=expected_result_df)
 
     result_df = backend.execute_sql(
@@ -100,7 +114,7 @@ def test_execute_sql(mocker):
             epsilon=0.1,
             delta=1e-5,
             contribution_bound=1,
-            clipping_thresholds=[[(0, 100)]] * len(agg_columns),
+            clipping_thresholds=[[(0.0, 100.0)]] * len(agg_columns),
         ),
         inner_sql="",
         agg_columns=agg_columns,
@@ -108,11 +122,11 @@ def test_execute_sql(mocker):
         ordering_terms=[],
     )
 
-    backend.create_inner_df.assert_called_once()
-    assert backend.contribution_bound.call_count == 2  # contribution bound called twice
-    backend.key_selection.assert_called_once()
-    backend.filter_by_selected_keys.assert_called_once()
-    backend.create_final_df.assert_called_once()
+    backend.create_inner_df.assert_called_once()  # type: ignore
+    assert backend.contribution_bound.call_count == 2  # type: ignore
+    backend.key_selection.assert_called_once()  # type: ignore
+    backend.filter_by_selected_keys.assert_called_once()  # type: ignore
+    backend.create_final_df.assert_called_once()  # type: ignore
 
     pd.testing.assert_frame_equal(result_df, expected_result_df)
 
@@ -130,11 +144,11 @@ def test_create_final_df(mocker):
         )
 
     final_df = backend.create_final_df(
-        None,
+        pd.DataFrame(),
         agg_columns,
         group_by=["attribute"],
         sigmas=[1.0] * len(agg_columns),
-        clipping_thresholds=[[(0, 100)]] * len(agg_columns),
+        clipping_thresholds=[[(0.0, 100.0)]] * len(agg_columns),
     )
     expected_df = pd.DataFrame(
         [
@@ -168,7 +182,7 @@ def test_key_selection(mocker):
 
     # Set min_frequency=2 for minimum frequency rule
     selected_keys = backend.key_selection(
-        None, ["group"], "uid", min_frequency=2, sigma=0, tau=1
+        pd.DataFrame(), ["group"], "uid", min_frequency=2, sigma=0, tau=1
     )
     assert ("a",) in selected_keys
     assert ("b",) in selected_keys
@@ -176,7 +190,7 @@ def test_key_selection(mocker):
 
     # Set min_frequency=3 for minimum frequency rule
     selected_keys = backend.key_selection(
-        None, ["group"], "uid", min_frequency=3, sigma=0, tau=1
+        pd.DataFrame(), ["group"], "uid", min_frequency=3, sigma=0, tau=1
     )
     assert ("a",) in selected_keys
     assert ("b",) not in selected_keys
