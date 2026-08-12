@@ -55,7 +55,11 @@ class DuckDBBackend(SQLBackend):
             ) from e
 
     def contribution_bound(
-        self, inner_df: DataFrameLike, privacy_unit: str, params: DPParams
+        self,
+        inner_df: DataFrameLike,
+        privacy_unit: str,
+        params: DPParams,
+        priority_column: str,
     ) -> pl.DataFrame:
         logger.debug(
             "DuckDB contribution_bound: privacy_unit=%s bound=%s empty=%s",
@@ -74,20 +78,22 @@ class DuckDBBackend(SQLBackend):
         if inner_df.is_empty():
             return inner_df
 
-        # Polars treats NA values as the key in groups by default
-        # Generate random rank within each group and filter by contribution_bound
-        filtered_df = (
-            inner_df.with_columns(
-                pl.int_range(0, pl.len())
-                .shuffle()
-                .over(privacy_unit)
-                .alias("_sample_rank_")
-            )
-            .filter(pl.col("_sample_rank_") < params.contribution_bound)
-            .drop("_sample_rank_")
+        # Rank contributions by the shared random priority within each privacy unit.
+        filtered_df = inner_df.filter(
+            pl.col(priority_column).rank(method="ordinal").over(privacy_unit)
+            <= params.contribution_bound
         )
         logger.debug("DuckDB contribution_bound applied")
         return filtered_df
+
+    def add_random_priority(self, df: DataFrameLike, column_name: str) -> pl.DataFrame:
+        if not isinstance(df, pl.DataFrame):
+            raise UnsupportedBackendError(
+                "Expected Polars DataFrame",
+                context={"actual_type": type(df).__name__},
+                hint="Provide a polars.DataFrame",
+            )
+        return df.with_columns(pl.int_range(0, pl.len()).shuffle().alias(column_name))
 
     def apply_aggregation(
         self,
@@ -230,12 +236,12 @@ class DuckDBBackend(SQLBackend):
                 hint="Ensure the input is polars.DataFrame",
             )
 
+        if len(selected_keys) == 0:
+            # If no selected keys, return an empty DataFrame with the same schema
+            return pl.DataFrame(schema=df.schema)
         if len(group_by) == 0:
             # If no group by columns, return the original Table
             return df
-        elif len(selected_keys) == 0:
-            # If selected_keys is empty, return an empty DataFrame with the same schema
-            return pl.DataFrame(schema=df.schema)
         else:
             ref_df = pl.DataFrame(selected_keys, schema=group_by, orient="row")
             filtered_df = df.join(ref_df, on=group_by, how="inner")

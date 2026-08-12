@@ -1,4 +1,5 @@
 import logging
+import math
 
 from dp_accounting.pld.common import DifferentialPrivacyParameters
 from dp_accounting.pld.privacy_loss_distribution import (
@@ -39,8 +40,10 @@ def calc_alpha_beta_for_tau_thresholding(
         contribution_bound,
     )
     # Calculate based on Theorem 4.1 of [Wilkins et al., TPDP'22]
-    alpha = (contribution_bound**2) / (2 * sigma**2)
-    beta = 1 - (stats.norm.cdf((tau - min_frequency) / sigma)) ** contribution_bound
+    alpha = contribution_bound / (2 * sigma**2)
+    beta = float(
+        1 - (stats.norm.cdf((tau - min_frequency) / sigma)) ** contribution_bound
+    )
     logger.debug("alpha/beta computed: alpha=%s beta=%s", alpha, beta)
     return alpha, beta
 
@@ -81,11 +84,11 @@ def calc_pld_for_tau_thresholding(
     # Calculate based on Theorem 4.1 of [Wilkins et al., TPDP'22]
     pld_gaussian = from_gaussian_mechanism(
         sigma,
-        contribution_bound,
+        math.sqrt(contribution_bound),
         value_discretization_interval=discretization_interval,
     )
     logger.debug("PLD (gaussian) created")
-    delta_infinite = (
+    delta_infinite = float(
         1 - (stats.norm.cdf((tau - min_frequency) / sigma)) ** contribution_bound
     )
     logger.debug("delta_infinite=%s", delta_infinite)
