@@ -1,0 +1,282 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Validator &mdash; DPSQL+  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="DPParams" href="dpparams.html" />
+    <link rel="prev" title="Engine" href="engine.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            DPSQL+
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="accountant.html">Accountant</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backend.html">Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="engine.html">Engine</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Validator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#validation-pipeline-privacy-constraints">Validation Pipeline &amp; Privacy Constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#primary-exception-classes">Primary Exception Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#private-query-options-parameters">PRIVATE_QUERY OPTIONS Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#aggregation-argument-form">Aggregation Argument Form</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dpparams.html">DPParams</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DPSQL+</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Validator</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/validator.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="validator">
+<h1>Validator<a class="headerlink" href="#validator" title="Link to this heading"></a></h1>
+<p>The DPSQL+ Validator parses SQL strings (in a Spark/SQLite-like dialect) and performs static checks:</p>
+<ul class="simple">
+<li><p>Registration of private tables (<code class="docutils literal notranslate"><span class="pre">ALTER</span> <span class="pre">PRIVATE_TABLE</span> <span class="pre">...</span></code>)</p></li>
+<li><p>Uniqueness and propagation of the privacy unit column in CTEs (<code class="docutils literal notranslate"><span class="pre">WITH</span></code> clause)</p></li>
+<li><p>Allowed join constraints (only equality joins on privacy unit columns)</p></li>
+<li><p>Column and aggregation constraints in the final <code class="docutils literal notranslate"><span class="pre">SELECT</span></code></p></li>
+<li><p>Extraction of privacy parameters (<code class="docutils literal notranslate"><span class="pre">PRIVATE_QUERY</span> <span class="pre">OPTIONS</span> <span class="pre">...</span></code>)</p></li>
+<li><p>Detection of unsupported constructs (e.g. <code class="docutils literal notranslate"><span class="pre">PIVOT</span></code> / <code class="docutils literal notranslate"><span class="pre">UNPIVOT</span></code> / <code class="docutils literal notranslate"><span class="pre">LATERAL</span> <span class="pre">VIEW</span></code>)</p></li>
+</ul>
+<p>If you already understand the syntax, see the raw grammar: <a class="reference download internal" download="" href="_downloads/63963ca32fe13a69e1fc886fd37694c4/sqlgrammar.lark"><code class="xref download docutils literal notranslate"><span class="pre">sqlgrammar.lark</span></code></a>.</p>
+<section id="validation-pipeline-privacy-constraints">
+<h2>Validation Pipeline &amp; Privacy Constraints<a class="headerlink" href="#validation-pipeline-privacy-constraints" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>ALTER PRIVATE_TABLE</p></li>
+</ol>
+<blockquote>
+<div><ul class="simple">
+<li><p>Capture (optional) database name, table name, and exactly one <code class="docutils literal notranslate"><span class="pre">PRIVACY_UNIT_COLUMN</span></code>.</p></li>
+<li><p>Reject duplicate registrations.</p></li>
+</ul>
+</div></blockquote>
+<ol class="arabic simple" start="2">
+<li><p>WITH (CTEs)</p></li>
+</ol>
+<blockquote>
+<div><ul class="simple">
+<li><p>Parse each CTE <code class="docutils literal notranslate"><span class="pre">SELECT</span></code> core.</p></li>
+<li><p>If private tables are referenced, enforce exactly one privacy unit column.</p></li>
+<li><p>For set operations (e.g. <code class="docutils literal notranslate"><span class="pre">UNION</span></code> / <code class="docutils literal notranslate"><span class="pre">INTERSECT</span></code>), the privacy unit column name must match on both sides.</p></li>
+</ul>
+</div></blockquote>
+<ol class="arabic simple" start="3">
+<li><p>FROM / JOIN in CTEs</p></li>
+</ol>
+<blockquote>
+<div><ul class="simple">
+<li><p>Disallow <code class="docutils literal notranslate"><span class="pre">CROSS</span> <span class="pre">JOIN</span></code> between private tables.</p></li>
+<li><p>Allow only equality predicates (<code class="docutils literal notranslate"><span class="pre">table_a.col</span> <span class="pre">=</span> <span class="pre">table_b.col</span></code>) chained with <code class="docutils literal notranslate"><span class="pre">AND</span></code> for private tables.</p></li>
+<li><p>Forbid duplicate equality predicates and self-joins on the same privacy unit column.</p></li>
+</ul>
+</div></blockquote>
+<ol class="arabic simple" start="4">
+<li><p>PRIVATE_QUERY OPTIONS</p></li>
+</ol>
+<blockquote>
+<div><ul class="simple">
+<li><p>Extract privacy parameter literals (<code class="docutils literal notranslate"><span class="pre">EPSILON</span></code>, <code class="docutils literal notranslate"><span class="pre">DELTA</span></code>, <code class="docutils literal notranslate"><span class="pre">MIN_FREQUENCY</span></code>, <code class="docutils literal notranslate"><span class="pre">CONTRIBUTION_BOUND</span></code>).</p></li>
+<li><p>Validate ranges (<code class="docutils literal notranslate"><span class="pre">EPSILON</span> <span class="pre">&gt;</span> <span class="pre">0</span></code>, <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">DELTA</span> <span class="pre">&lt;=</span> <span class="pre">1</span></code>, <code class="docutils literal notranslate"><span class="pre">MIN_FREQUENCY</span> <span class="pre">&gt;=</span> <span class="pre">1</span></code>, <code class="docutils literal notranslate"><span class="pre">CONTRIBUTION_BOUND</span> <span class="pre">&gt;=</span> <span class="pre">1</span></code>).</p></li>
+</ul>
+</div></blockquote>
+<ol class="arabic simple" start="5">
+<li><p>Final SELECT</p></li>
+</ol>
+<blockquote>
+<div><ul class="simple">
+<li><p>Forbid projecting the raw privacy unit column.</p></li>
+<li><p>Forbid including the privacy unit column in <code class="docutils literal notranslate"><span class="pre">GROUP</span> <span class="pre">BY</span></code>.</p></li>
+<li><p>Forbid using the privacy unit column inside aggregation arguments.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DISTINCT</span></code> only allowed inside aggregation functions (e.g. <code class="docutils literal notranslate"><span class="pre">COUNT(DISTINCT</span> <span class="pre">col)</span></code>).</p></li>
+<li><p>Disallow <code class="docutils literal notranslate"><span class="pre">*</span></code> wildcard.</p></li>
+</ul>
+</div></blockquote>
+<ol class="arabic simple" start="6">
+<li><p>Final Consistency</p></li>
+</ol>
+<blockquote>
+<div><ul class="simple">
+<li><p>Ensure a single lineage of the privacy unit column remains.</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="primary-exception-classes">
+<h2>Primary Exception Classes<a class="headerlink" href="#primary-exception-classes" title="Link to this heading"></a></h2>
+<p>Each may include a <code class="docutils literal notranslate"><span class="pre">context</span></code> dict and a corrective <code class="docutils literal notranslate"><span class="pre">hint</span></code>.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">QueryParseError</span></code> - Grammar / token / structural ordering errors</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PrivacyConstraintError</span></code> - Privacy constraint violations (raw projection, <code class="docutils literal notranslate"><span class="pre">GROUP</span> <span class="pre">BY</span></code> usage, disallowed <code class="docutils literal notranslate"><span class="pre">JOIN</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ValidationError</span></code> - General logical/state validation failures (missing private table, unmatched counts)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">UnsupportedQueryError</span></code> - Explicitly unsupported constructs (e.g. <code class="docutils literal notranslate"><span class="pre">PIVOT</span></code>)</p></li>
+</ul>
+</section>
+<section id="private-query-options-parameters">
+<h2>PRIVATE_QUERY OPTIONS Parameters<a class="headerlink" href="#private-query-options-parameters" title="Link to this heading"></a></h2>
+<p>Supported literals:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">EPSILON</span></code>: Positive float (e.g. <code class="docutils literal notranslate"><span class="pre">1.0</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DELTA</span></code>: Float in <code class="docutils literal notranslate"><span class="pre">(0,</span> <span class="pre">1]</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">1e-5</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MIN_FREQUENCY</span></code> (optional): Positive integer (e.g. <code class="docutils literal notranslate"><span class="pre">10</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CONTRIBUTION_BOUND</span></code>: Positive integer (e.g. <code class="docutils literal notranslate"><span class="pre">1</span></code>)</p></li>
+</ul>
+</section>
+<section id="aggregation-argument-form">
+<h2>Aggregation Argument Form<a class="headerlink" href="#aggregation-argument-form" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Clipping bounds are supplied inline for certain aggregations where required: <code class="docutils literal notranslate"><span class="pre">SUM(column,</span> <span class="pre">lower_bound,</span> <span class="pre">upper_bound)</span></code>, <code class="docutils literal notranslate"><span class="pre">AVG(column,</span> <span class="pre">lower_bound,</span> <span class="pre">upper_bound)</span></code>, <code class="docutils literal notranslate"><span class="pre">STDDEV_SAMP(column,</span> <span class="pre">lower_bound,</span> <span class="pre">upper_bound)</span></code>, <code class="docutils literal notranslate"><span class="pre">VAR_SAMP(column,</span> <span class="pre">lower_bound,</span> <span class="pre">upper_bound)</span></code>, <code class="docutils literal notranslate"><span class="pre">COVAR_SAMP(column_a,</span> <span class="pre">column_b,</span> <span class="pre">lower_bound,</span> <span class="pre">upper_bound,</span> <span class="pre">lower_bound,</span> <span class="pre">upper_bound)</span></code>.</p></li>
+<li><p>Bounds must satisfy <code class="docutils literal notranslate"><span class="pre">lower_bound</span> <span class="pre">&lt;=</span> <span class="pre">upper_bound</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">COUNT</span></code> / <code class="docutils literal notranslate"><span class="pre">COUNT(DISTINCT</span> <span class="pre">...)</span></code> take no clipping parameters.</p></li>
+</ul>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h2>
+<p>Simple private aggregation:</p>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">ALTER</span><span class="w"> </span><span class="n">PRIVATE_TABLE</span><span class="w"> </span><span class="n">sales</span>
+<span class="w">  </span><span class="k">OPTIONS</span><span class="w"> </span><span class="n">PRIVACY_UNIT_COLUMN</span><span class="p">(</span><span class="n">sales</span><span class="p">.</span><span class="n">user_id</span><span class="p">);</span><span class="w"> </span><span class="c1">-- Equivalent to dpsql.engine.Engine.register_database.</span>
+
+<span class="k">WITH</span><span class="w"> </span><span class="n">filtered</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span>
+<span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="w">  </span><span class="k">WHERE</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span>
+<span class="p">)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">PRIVATE_QUERY</span><span class="w"> </span><span class="k">OPTIONS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">EPSILON</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="n">DELTA</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span>
+<span class="w">  </span><span class="n">CONTRIBUTION_BOUND</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
+<span class="p">)</span><span class="w"> </span><span class="c1">-- Equivalent to epsilon, delta, and contribution_bound in dpsql.dp_params.DPParams.</span>
+<span class="k">COUNT</span><span class="p">(</span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">user_id</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">user_cnt</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_amount</span><span class="w"> </span><span class="c1">-- Equivalent to clipping_thresholds in dpsql.dp_params.DPParams.</span>
+<span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">filtered</span>
+<span class="w">  </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">total_amount</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Allowed join (equality):</p>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">ALTER</span><span class="w"> </span><span class="n">PRIVATE_TABLE</span><span class="w"> </span><span class="n">users</span>
+<span class="w">  </span><span class="k">OPTIONS</span><span class="w"> </span><span class="n">PRIVACY_UNIT_COLUMN</span><span class="p">(</span><span class="n">users</span><span class="p">.</span><span class="n">uid</span><span class="p">);</span><span class="w"> </span><span class="c1">-- Equivalent to dpsql.engine.Engine.register_database.</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="n">PRIVATE_TABLE</span><span class="w"> </span><span class="n">sessions</span>
+<span class="w">  </span><span class="k">OPTIONS</span><span class="w"> </span><span class="n">PRIVACY_UNIT_COLUMN</span><span class="p">(</span><span class="n">sessions</span><span class="p">.</span><span class="n">uid</span><span class="p">);</span><span class="w"> </span><span class="c1">-- Equivalent to dpsql.engine.Engine.register_database.</span>
+
+<span class="k">WITH</span><span class="w"> </span><span class="n">joined</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="n">uid</span><span class="p">,</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="n">duration</span>
+<span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">u</span>
+<span class="w">  </span><span class="k">JOIN</span><span class="w"> </span><span class="n">sessions</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">s</span>
+<span class="w">    </span><span class="k">ON</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">uid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="n">uid</span>
+<span class="p">)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">PRIVATE_QUERY</span><span class="w"> </span><span class="k">OPTIONS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">EPSILON</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="n">DELTA</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span>
+<span class="w">  </span><span class="n">MIN_FREQUENCY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">  </span><span class="n">CONTRIBUTION_BOUND</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
+<span class="p">)</span><span class="w"> </span><span class="c1">-- Equivalent to dpsql.dp_params.DPParams.</span>
+<span class="k">COUNT</span><span class="p">(</span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">uid</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">active_users</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_duration</span><span class="w"> </span><span class="c1">-- Equivalent to clipping_thresholds in dpsql.dp_params.DPParams.</span>
+<span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">joined</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Violation (<code class="docutils literal notranslate"><span class="pre">GROUP</span> <span class="pre">BY</span></code> includes privacy unit column):</p>
+<div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="k">ALTER</span><span class="w"> </span><span class="n">PRIVATE_TABLE</span><span class="w"> </span><span class="n">joined</span>
+<span class="w">  </span><span class="k">OPTIONS</span><span class="w"> </span><span class="n">PRIVACY_UNIT_COLUMN</span><span class="p">(</span><span class="n">joined</span><span class="p">.</span><span class="n">uid</span><span class="p">);</span>
+
+<span class="k">SELECT</span><span class="w"> </span><span class="n">PRIVATE_QUERY</span><span class="w"> </span><span class="k">OPTIONS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">EPSILON</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="n">DELTA</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span>
+<span class="w">  </span><span class="n">MIN_FREQUENCY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">  </span><span class="n">CONTRIBUTION_BOUND</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
+<span class="p">)</span><span class="w"> </span><span class="n">uid</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span>
+<span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">joined</span>
+<span class="w">  </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">uid</span><span class="p">;</span><span class="w">  </span><span class="c1">-- INVALID</span>
+</pre></div>
+</div>
+<p>Raises <code class="docutils literal notranslate"><span class="pre">PrivacyConstraintError</span></code> (e.g. “Privacy unit column in <cite>GROUP BY</cite> is disallowed”).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="engine.html" class="btn btn-neutral float-left" title="Engine" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="dpparams.html" class="btn btn-neutral float-right" title="DPParams" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

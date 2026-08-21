@@ -1,0 +1,289 @@
+// This is a subset of SQLite3 (https://sqlite.org/lang_select.html)
+// https://www.sqlite.org/lang_expr.html
+// https://www.sqlite.org/datatype3.html#affinity
+// https://github.com/antlr/codebuff/blob/master/grammars/org/antlr/codebuff/SQLite.g4
+// https://spark.apache.org/docs/latest/sql-ref-syntax-qry-select.html
+// https://spark.apache.org/docs/latest/sql-ref-syntax-qry-select-pivot.html
+// https://spark.apache.org/docs/latest/sql-ref-syntax-qry-select-unpivot.html
+// https://spark.apache.org/docs/latest/sql-ref-syntax-qry-select-lateral-view.html
+query_statement: alter_private_table* (WITH common_table_expression ("," common_table_expression)*)? final_select_stmt ";"
+
+alter_private_table: ALTER PRIVATE_TABLE (db_name ".")? table_name OPTIONS "(" PRIVACY_UNIT_COLUMN "=" (table_name ".")? column_name ")" ";"
+
+common_table_expression: table_name AS (NOT? MATERIALIZED)? "(" select_stmt ")"
+
+select_stmt: select_core (compound_operator select_core)?
+
+select_core: SELECT hints_clause? (DISTINCT | ALL)? result_column ("," result_column)* FROM (table_expr | join_clause) (PIVOT pivot_clause)? (UNPIVOT unpivot_clause)? (LATERAL VIEW lateral_view_clause)* (WHERE expr)? (GROUP BY expr ("," expr)*)? (HAVING expr)? 
+
+final_select_stmt: final_select_core (ORDER BY ordering_term ("," ordering_term)*)? (LIMIT INT (OFFSET INT)? )? 
+
+final_select_core: SELECT (PRIVATE_QUERY OPTIONS "(" privacy_param "=" literal_value ("," privacy_param "=" literal_value)* ")" )? final_result_column ("," final_result_column)* FROM table_expr (GROUP BY (table_name ".")? column_name ("," (table_name ".")? column_name)*)?
+
+join_clause: table_expr join_operator table_expr join_constraint
+join_constraint: (ON expr) | (USING "(" column_name ("," column_name)* ")")
+
+join_operator: ((((LEFT | RIGHT | FULL) OUTER?) | INNER)?
+    | CROSS )? JOIN 
+
+result_column: expr (AS column_name_alias)? 
+    | ASTERISK 
+    | table_name "." ASTERISK
+
+final_result_column: final_expr (AS column_name_alias)?
+    | ASTERISK
+
+table_expr: (db_name ".")? table_name (AS table_name_alias)?
+
+window_defn: "(" base_window_name? (PARTITION BY expr ("," expr)*)? (ORDER BY ordering_term ("," ordering_term)*)? frame_spec? ")"
+
+frame_spec: (RANGE | ROWS | GROUPS) ((BETWEEN ( UNBOUNDED PRECEDING | expr PRECEDING | CURRENT ROW | expr FOLLOWING ) AND ( expr PRECEDING | CURRENT ROW | expr FOLLOWING | UNBOUNDED FOLLOWING )) | UNBOUNDED PRECEDING | expr PRECEDING | CURRENT ROW ) (EXCLUDE NO OTHERS | EXCLUDE CURRENT ROW | EXCLUDE GROUP | EXCLUDE TIES)?
+
+compound_operator: (UNION ALL?) | INTERSECT | EXCEPT
+
+ordering_term: (table_name ".")? column_name (ASC | DESC)?
+
+expr: literal_value 
+    | (table_name ".")? column_name 
+    | unary_operator expr 
+    | expr binary_operator expr 
+    | function_name "(" function_argument ")" filter_clause? over_clause? 
+    | "(" expr ("," expr)* ")" 
+    | CAST "(" expr AS type_name ")" 
+    | expr NOT? (LIKE expr (ESCAPE expr)? | (GLOB | REGEXP | MATCH) expr ) 
+    | expr IS (NOT)? NULL 
+    | expr NOT? BETWEEN expr AND expr 
+    | CASE expr? (WHEN expr THEN expr)* (ELSE expr)? END
+    | expr NOT? IN "(" (expr ("," expr)*)? ")"
+
+final_expr: (table_name ".")? column_name 
+    | final_aggregate_function_name "(" final_aggregate_function_argument ")" 
+
+filter_clause: FILTER "(" WHERE expr ")"
+
+function_argument: DISTINCT? expr ("," expr)* (ORDER BY ordering_term ("," ordering_term)*)? | ASTERISK?
+
+final_aggregate_function_argument: (DISTINCT? (table_name ".")? column_name | ASTERISK) ("," (table_name ".")? column_name)* ("," literal_value)*
+
+final_aggregate_function_name: COUNT | SUM | AVG | VAR_POP | VAR_SAMP | STDDEV_POP | STDDEV_SAMP | COVAR_POP | COVAR_SAMP
+
+over_clause: OVER (window_name 
+    | "(" base_window_name? (PARTITION BY expr ("," expr)*)? (ORDER BY ordering_term ("," ordering_term)*)? frame_spec? ")" )
+
+hints_clause: "/*+" hint ("," hint)* "*/"
+hint: CNAME | (CNAME "(" (CNAME | NUMBER) ("," (CNAME | NUMBER))* ")")
+
+pivot_clause: "(" (function_name "(" function_argument ")" (AS column_name_alias)?) ("," (function_name "(" function_argument ")" (AS column_name_alias)?) )* (pivot_for_in_single_clause | pivot_for_in_multi_clause) ")"
+
+pivot_for_in_single_clause: FOR (table_name ".")? column_name  IN "(" (literal_value (AS literal_value_alias)? ("," literal_value (AS literal_value_alias)?)*) ")"
+pivot_for_in_multi_clause: FOR "(" ((table_name ".")? column_name) ("," ((table_name ".")? column_name))+ ")" IN "(" ("(" literal_value ("," literal_value)+ ")" (AS literal_value_alias)?) ("," ("(" literal_value ("," literal_value)+ ")") (AS literal_value_alias)? )* ")"
+
+unpivot_clause: ((INCLUDE | EXCLUDE) NULLS)? "(" (single_value_column_unpivot_clause | multi_value_column_unpivot_clause) ")" (AS table_name_alias)?
+
+single_value_column_unpivot_clause: (table_name ".")? column_name FOR ((table_name ".")? column_name) IN "(" ((table_name ".")? column_name) (AS column_name_alias)? ("," ((table_name ".")? column_name) (AS column_name_alias)? )* ")"
+
+multi_value_column_unpivot_clause: "(" ((table_name ".")? column_name) ("," ((table_name ".")? column_name) )+ ")" FOR (table_name ".")? column_name IN "(" "(" ((table_name ".")? column_name) ("," ((table_name ".")? column_name))+ ")" (AS column_name_alias)?  ("," "(" ((table_name ".")? column_name) ("," ((table_name ".")? column_name))+  ")" (AS column_name_alias)? )+ ")" 
+
+lateral_view_clause: OUTER? expr (table_name_alias)? AS column_name_alias
+
+literal_value_alias: CNAME
+
+type_name: name+ ("(" (signed_number | (signed_number "," signed_number)) ")")?
+
+signed_number: ("+" | "-")? numeric_literal
+
+numeric_literal: NUMBER
+string_literal: SINGLE_QUOTED_STRING
+blob_literal: ("x"|"X") HEXDIGIT+
+
+literal_value: numeric_literal 
+    | string_literal 
+    | blob_literal 
+    | NULL 
+    | TRUE 
+    | FALSE 
+    | CURRENT_TIME 
+    | CURRENT_DATE 
+    | CURRENT_TIMESTAMP 
+
+privacy_param: EPSILON | DELTA | MIN_FREQUENCY | CONTRIBUTION_BOUND
+
+ALL: "ALL" | "all"
+ALTER: "ALTER" | "alter"
+AND: "AND" | "and"
+AS: "AS" | "as"
+ASC: "ASC" | "asc"
+AVG: "AVG" | "avg"
+BETWEEN: "BETWEEN" | "between"
+BY: "BY" | "by"
+CASE: "CASE" | "case"
+CAST: "CAST" | "cast"
+COLLATE: "COLLATE" | "collate"
+CROSS: "CROSS" | "cross"
+CURRENT: "CURRENT" | "current"
+CURRENT_TIME: "CURRENT_TIME"
+CURRENT_DATE: "CURRENT_DATE"
+CURRENT_TIMESTAMP: "CURRENT_TIMESTAMP"
+CONTRIBUTION_BOUND: "CONTRIBUTION_BOUND" | "contribution_bound"
+COUNT: "COUNT" | "count"
+DESC: "DESC" | "desc"
+DISTINCT: "DISTINCT" | "distinct"
+DELTA: "DELTA" | "delta"
+ELSE: "ELSE" | "else"
+ESCAPE: "ESCAPE" | "escape"
+EPSILON: "EPSILON" | "epsilon"
+EXCEPT: "EXCEPT" | "except"
+EXCLUDE: "EXCLUDE" | "exclude"
+END: "END" | "end"
+FAIL: "FAIL" | "fail"
+FALSE: "FALSE" | "false"
+FILTER: "FILTER" | "filter"
+FIRST: "FIRST" | "first"
+FOLLOWING: "FOLLOWING" | "following"
+FOR: "FOR" | "for"
+FROM: "FROM" | "from"
+FULL: "FULL" | "full"
+GLOB: "GLOB" | "glob"
+GROUP: "GROUP" | "group"
+GROUPS: "GROUPS" | "groups"
+HAVING: "HAVING" | "having"
+IGNORE: "IGNORE" | "ignore"
+INNER: "INNER" | "inner"
+INTERSECT: "INTERSECT" | "intersect"
+IS: "IS" | "is"
+IN: "IN" | "in"
+INCLUDE: "INCLUDE" | "include"
+JOIN: "JOIN" | "join"
+MIN_FREQUENCY: "MIN_FREQUENCY" | "min_frequency"
+LAST: "LAST" | "last"
+LATERAL: "LATERAL" | "lateral"
+LIKE: "LIKE" | "like"
+LEFT: "LEFT" | "left"
+LIMIT: "LIMIT" | "limit"
+MATERIALIZED: "MATERIALIZED" | "materialized"
+NATURAL: "NATURAL" | "natural"
+MATCH: "MATCH" | "match"
+NO: "NO" | "no"
+NOT: "NOT" | "not"
+NULL: "NULL" | "null"
+NULLS: "NULLS" | "nulls"
+NONE: "NONE" | "none"
+OFFSET: "OFFSET" | "offset"
+ON: "ON" | "on"
+OR: "OR" | "or"
+OPTIONS: "OPTIONS" | "options"
+OVER: "OVER" | "over"
+ORDER: "ORDER" | "order"
+OTHERS: "OTHERS" | "others"
+OUTER: "OUTER" | "outer"
+PARTITION: "PARTITION" | "partition"
+PRECEDING: "PRECEDING" | "preceding"
+PRIVATE_TABLE: "PRIVATE_TABLE" | "private_table"
+PRIVACY_UNIT_COLUMN: "PRIVACY_UNIT_COLUMN" | "privacy_unit_column"
+PRIVATE_QUERY: "PRIVATE_QUERY" | "private_query"
+RANGE: "RANGE" | "range"
+REGEXP: "REGEXP" | "regexp"
+RIGHT: "RIGHT" | "right"
+PIVOT: "PIVOT" | "pivot"
+ROLLBACK: "ROLLBACK" | "rollback"
+ROWS: "ROWS" | "rows"
+ROW: "ROW" | "row"
+SELECT: "SELECT" | "select"
+SUM: "SUM" | "sum"
+VAR_POP: "VAR_POP" | "var_pop"
+VAR_SAMP: "VAR_SAMP" | "var_samp" | "VAR" | "var"
+STDDEV_POP: "STDDEV_POP" | "stddev_pop"
+STDDEV_SAMP: "STDDEV_SAMP" | "stddev_samp" | "STDDEV" | "stddev"
+COVAR_POP: "COVAR_POP" | "covar_pop"
+COVAR_SAMP: "COVAR_SAMP" | "covar_samp" | "COVAR" | "covar"
+TIES: "TIES" | "ties"
+TRUE: "TRUE" | "true"
+THEN: "THEN" | "then"
+UNBOUNDED: "UNBOUNDED" | "unbounded"
+UNION: "UNION" | "union"
+UNPIVOT: "UNPIVOT" | "unpivot"
+USING: "USING" | "using"
+VIEW: "VIEW" | "view"
+WHERE: "WHERE" | "where"
+WITH: "WITH" | "with"
+WHEN: "WHEN" | "when"
+
+//
+// Names (Variables)
+//
+LCASE_LETTER: "a".."z"
+UCASE_LETTER: "A".."Z"
+
+LETTER: UCASE_LETTER | LCASE_LETTER
+WORD: LETTER+
+
+CNAME: ("_"|LETTER) ("_"|LETTER|DIGIT)*
+
+//
+// Single quote string 
+//
+SINGLE_QUOTED_STRING: /'[^']*'/
+
+table_name: CNAME
+db_name: CNAME
+table_name_alias: CNAME
+column_name: CNAME
+column_name_alias: CNAME
+base_window_name: CNAME
+window_name: CNAME
+function_name: CNAME
+collation_name: CNAME
+
+PLUS: "+"
+MINUS: "-"
+EXCLAMATION: "!"
+ASTERISK: "*"
+TILDE: "~"
+SLASH: "/"
+PERCENT: "%"
+AMPERSAND: "&"
+PIPE: "|"
+CARET: "^"
+DOUBLE_AMPERSAND: "&&"
+DOUBLE_PIPE: "||"
+LESS_THAN: "<"
+MUCH_LESS: "<<"
+MUCH_GREATER: ">>"
+GREATER_THAN: ">"
+LESS_THAN_EQUAL: "<="
+GREATER_THAN_EQUAL: ">="
+EQUAL: "="
+NOT_EQUAL: "!=" | "<>"
+
+//
+// Numbers
+//
+
+DIGIT: "0".."9"
+HEXDIGIT: "a".."f"|"A".."F"|DIGIT
+
+INT: DIGIT+
+SIGNED_INT: [PLUS?|MINUS] INT
+DECIMAL: INT "." INT? | "." INT
+
+// float = /-?\d+(\.\d+)?([eE][+-]?\d+)?/
+_EXP: ("e"|"E") SIGNED_INT
+FLOAT: INT _EXP | DECIMAL _EXP?
+SIGNED_FLOAT: [PLUS?|MINUS] FLOAT
+
+NUMBER: SIGNED_FLOAT | SIGNED_INT
+
+BLOB: "BLOB" | "blob"
+INTEGER: "INTEGER" | "integer"
+REAL: "REAL" | "real"
+TEXT: "TEXT" | "text"
+
+name: CNAME
+
+unary_operator: PLUS | MINUS | EXCLAMATION | TILDE | NOT
+binary_operator: PLUS | MINUS | ASTERISK | SLASH | PERCENT | DOUBLE_PIPE | DOUBLE_AMPERSAND | AMPERSAND | PIPE | CARET | MUCH_LESS | MUCH_GREATER 
+    | LESS_THAN | LESS_THAN_EQUAL | EQUAL | NOT_EQUAL | GREATER_THAN | GREATER_THAN_EQUAL 
+    | AND | OR
+
+%import common.WS
+%ignore WS

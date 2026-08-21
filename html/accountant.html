@@ -1,0 +1,516 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accountant &mdash; DPSQL+  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Backend" href="backend.html" />
+    <link rel="prev" title="Quick start" href="quickstart.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            DPSQL+
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick start</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Accountant</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#dpsql.accountant.Accountant"><code class="docutils literal notranslate"><span class="pre">Accountant</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.Accountant.MAX_REMAINING_QUERIES"><code class="docutils literal notranslate"><span class="pre">Accountant.MAX_REMAINING_QUERIES</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.Accountant.check_budget"><code class="docutils literal notranslate"><span class="pre">Accountant.check_budget()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.Accountant.get_sensitivities"><code class="docutils literal notranslate"><span class="pre">Accountant.get_sensitivities()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.Accountant.remaining_queries"><code class="docutils literal notranslate"><span class="pre">Accountant.remaining_queries()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.Accountant.update_budget"><code class="docutils literal notranslate"><span class="pre">Accountant.update_budget()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#dpsql.accountant.BasicAccountant"><code class="docutils literal notranslate"><span class="pre">BasicAccountant</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.BasicAccountant.remaining_queries"><code class="docutils literal notranslate"><span class="pre">BasicAccountant.remaining_queries()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.BasicAccountant.update_budget"><code class="docutils literal notranslate"><span class="pre">BasicAccountant.update_budget()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#dpsql.accountant.PLDAccountant"><code class="docutils literal notranslate"><span class="pre">PLDAccountant</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.PLDAccountant.calculate_min_epsilon"><code class="docutils literal notranslate"><span class="pre">PLDAccountant.calculate_min_epsilon()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.PLDAccountant.compute_pld"><code class="docutils literal notranslate"><span class="pre">PLDAccountant.compute_pld()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.PLDAccountant.remaining_queries"><code class="docutils literal notranslate"><span class="pre">PLDAccountant.remaining_queries()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.PLDAccountant.update_budget"><code class="docutils literal notranslate"><span class="pre">PLDAccountant.update_budget()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#dpsql.accountant.RenyiAccountant"><code class="docutils literal notranslate"><span class="pre">RenyiAccountant</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.RenyiAccountant.calculate_budget"><code class="docutils literal notranslate"><span class="pre">RenyiAccountant.calculate_budget()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.RenyiAccountant.calculate_min_epsilon"><code class="docutils literal notranslate"><span class="pre">RenyiAccountant.calculate_min_epsilon()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.RenyiAccountant.remaining_queries"><code class="docutils literal notranslate"><span class="pre">RenyiAccountant.remaining_queries()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpsql.accountant.RenyiAccountant.update_budget"><code class="docutils literal notranslate"><span class="pre">RenyiAccountant.update_budget()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="backend.html">Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="engine.html">Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validator.html">Validator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dpparams.html">DPParams</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DPSQL+</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Accountant</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/accountant.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="accountant">
+<h1>Accountant<a class="headerlink" href="#accountant" title="Link to this heading"></a></h1>
+<p>The DPSQL+ Accountant is responsible for managing the privacy budget across multiple queries.</p>
+<p>We provide two implementations of the Accountant class: <cite>RenyiAccountant</cite> and <cite>PLDAccountant</cite>.
+<cite>PLDAccountant</cite> provides a tighter bound on privacy budget consumption than <cite>RenyiAccountant</cite>.
+However, it is slower and does not support fully adaptive settings, where users can determine privacy parameters based on the results of previous queries.</p>
+<p>We also provide <cite>BasicAccountant</cite> for testing and debugging, but it is not recommended for production because <cite>RenyiAccountant</cite> provides tighter privacy guarantees at similar speed.</p>
+<p>The properties of the Accountant classes are summarized as follows:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>Accountant</p></td>
+<td><p>Composition</p></td>
+<td><p>Speed</p></td>
+<td><p>Fully adaptive composition <a class="footnote-reference brackets" href="#id6" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>RenyiAccountant</p></td>
+<td><p>Rényi DP composition <a class="footnote-reference brackets" href="#id4" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a></p></td>
+<td><p>Fast</p></td>
+<td><p>✔️</p></td>
+</tr>
+<tr class="row-odd"><td><p>PLDAccountant</p></td>
+<td><p>PLD composition <a class="footnote-reference brackets" href="#id5" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a></p></td>
+<td><p>Slow</p></td>
+<td><p>✖️</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class" id="module-dpsql.accountant">
+<dt class="sig sig-object py" id="dpsql.accountant.Accountant">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dpsql.accountant.</span></span><span class="sig-name descname"><span class="pre">Accountant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dpsql/accountant/accountant.html#Accountant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.Accountant" title="Link to this definition"></a></dt>
+<dd><p>Abstract class for an accountant that checks and updates the privacy budget.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>epsilon</strong> (<em>float</em>) – Privacy budget epsilon.</p></li>
+<li><p><strong>delta</strong> (<em>float</em>) – Privacy budget delta. delta = 1 represents infinite budget.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dpsql.accountant.Accountant.MAX_REMAINING_QUERIES">
+<span class="sig-name descname"><span class="pre">MAX_REMAINING_QUERIES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1000000</span></em><a class="headerlink" href="#dpsql.accountant.Accountant.MAX_REMAINING_QUERIES" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.accountant.Accountant.check_budget">
+<span class="sig-name descname"><span class="pre">check_budget</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agg_funcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Aggregation</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><span class="pre">DPParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="_modules/dpsql/accountant/accountant.html#Accountant.check_budget"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.Accountant.check_budget" title="Link to this definition"></a></dt>
+<dd><p>Check if the privacy budget is sufficient for the given parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agg_funcs</strong> (<em>list</em><em>[</em><em>Aggregation</em><em>]</em>) – The aggregation functions.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><em>DPParams</em></a>) – The differential privacy parameters.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if the privacy budget is sufficient, False otherwise.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.accountant.Accountant.get_sensitivities">
+<span class="sig-name descname"><span class="pre">get_sensitivities</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agg_funcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Aggregation</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><span class="pre">DPParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/dpsql/accountant/accountant.html#Accountant.get_sensitivities"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.Accountant.get_sensitivities" title="Link to this definition"></a></dt>
+<dd><p>Get the sensitivities of the aggregation functions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agg_funcs</strong> (<em>list</em><em>[</em><em>Aggregation</em><em>]</em>) – The aggregation functions.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><em>DPParams</em></a>) – The differential privacy parameters.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The sensitivities of the aggregation functions.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[float]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.accountant.Accountant.remaining_queries">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">remaining_queries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query_epsilon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query_delta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="reference internal" href="_modules/dpsql/accountant/accountant.html#Accountant.remaining_queries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.Accountant.remaining_queries" title="Link to this definition"></a></dt>
+<dd><p>Calculate how many more queries can be executed
+with the given epsilon and delta.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query_epsilon</strong> (<em>float</em>) – The epsilon cost per query.</p></li>
+<li><p><strong>query_delta</strong> (<em>float</em>) – The delta cost per query.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The maximum number of queries that can still be executed.
+Returns 0 if no more queries can be executed.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.accountant.Accountant.update_budget">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">update_budget</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agg_funcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Aggregation</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><span class="pre">DPParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/dpsql/accountant/accountant.html#Accountant.update_budget"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.Accountant.update_budget" title="Link to this definition"></a></dt>
+<dd><p>Update the privacy budget based on the given parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agg_func</strong> (<em>list</em><em>[</em><em>Aggregation</em><em>]</em>) – The aggregation functions.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><em>DPParams</em></a>) – The differential privacy parameters.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dpsql.accountant.BasicAccountant">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dpsql.accountant.</span></span><span class="sig-name descname"><span class="pre">BasicAccountant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warn_on_init</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dpsql/accountant/basic_accountant.html#BasicAccountant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.BasicAccountant" title="Link to this definition"></a></dt>
+<dd><p>Accountant which calculates the privacy budget using basic composition.
+Renyi Accountant and PLDAccountant provide advanced composition techniques,
+and thus yield tighter bounds on privacy budget consumption.
+Thus, BasicAccountant is mainly for testing and debugging purposes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>epsilon</strong> (<em>float</em>) – Privacy budget epsilon.</p></li>
+<li><p><strong>delta</strong> (<em>float</em>) – Privacy budget delta.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.accountant.BasicAccountant.remaining_queries">
+<span class="sig-name descname"><span class="pre">remaining_queries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query_epsilon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query_delta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="reference internal" href="_modules/dpsql/accountant/basic_accountant.html#BasicAccountant.remaining_queries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.BasicAccountant.remaining_queries" title="Link to this definition"></a></dt>
+<dd><p>Calculate how many more queries can be executed
+with the given epsilon and delta.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query_epsilon</strong> (<em>float</em>) – The epsilon cost per query.</p></li>
+<li><p><strong>query_delta</strong> (<em>float</em>) – The delta cost per query.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The maximum number of queries that can still be executed.
+Returns 0 if no more queries can be executed.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.accountant.BasicAccountant.update_budget">
+<span class="sig-name descname"><span class="pre">update_budget</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agg_funcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Aggregation</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><span class="pre">DPParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/dpsql/accountant/basic_accountant.html#BasicAccountant.update_budget"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.BasicAccountant.update_budget" title="Link to this definition"></a></dt>
+<dd><p>Update the privacy budget based on the given parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agg_func</strong> (<em>list</em><em>[</em><em>Aggregation</em><em>]</em>) – The aggregation functions.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><em>DPParams</em></a>) – The differential privacy parameters.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dpsql.accountant.PLDAccountant">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dpsql.accountant.</span></span><span class="sig-name descname"><span class="pre">PLDAccountant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discretization_interval</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0001</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dpsql/accountant/pld_accountant.html#PLDAccountant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.PLDAccountant" title="Link to this definition"></a></dt>
+<dd><p>Accountant based on numerical composition.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>epsilon</strong> (<em>float</em>) – Privacy budget epsilon.</p></li>
+<li><p><strong>delta</strong> (<em>float</em>) – Privacy budget delta.</p></li>
+<li><p><strong>discretization_interval</strong> (<em>float</em>) – The discretization interval for the
+privacy loss distribution.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.accountant.PLDAccountant.calculate_min_epsilon">
+<span class="sig-name descname"><span class="pre">calculate_min_epsilon</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pld</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PrivacyLossDistribution</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="reference internal" href="_modules/dpsql/accountant/pld_accountant.html#PLDAccountant.calculate_min_epsilon"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.PLDAccountant.calculate_min_epsilon" title="Link to this definition"></a></dt>
+<dd><p>Calculate the minimum epsilon value which satisfies
+(epsilon, delta)-differential privacy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>pld</strong> (<em>PrivacyLossDistribution</em>) – The privacy loss distribution.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The minimum epsilon value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.accountant.PLDAccountant.compute_pld">
+<span class="sig-name descname"><span class="pre">compute_pld</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agg_funcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Aggregation</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><span class="pre">DPParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">PrivacyLossDistribution</span></span></span><a class="reference internal" href="_modules/dpsql/accountant/pld_accountant.html#PLDAccountant.compute_pld"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.PLDAccountant.compute_pld" title="Link to this definition"></a></dt>
+<dd><p>Calculate the privacy loss distribution for aggregation functions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agg_funcs</strong> (<em>list</em><em>[</em><em>Aggregation</em><em>]</em>) – The aggregation functions to be executed.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><em>DPParams</em></a>) – The differential privacy parameters.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The privacy loss distribution.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>PrivacyLossDistribution</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.accountant.PLDAccountant.remaining_queries">
+<span class="sig-name descname"><span class="pre">remaining_queries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query_epsilon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query_delta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="reference internal" href="_modules/dpsql/accountant/pld_accountant.html#PLDAccountant.remaining_queries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.PLDAccountant.remaining_queries" title="Link to this definition"></a></dt>
+<dd><p>Calculate how many more queries can be executed
+with the given epsilon and delta.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query_epsilon</strong> (<em>float</em>) – The epsilon cost per query.</p></li>
+<li><p><strong>query_delta</strong> (<em>float</em>) – The delta cost per query.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The maximum number of queries that can still be executed.
+Returns 0 if no more queries can be executed.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.accountant.PLDAccountant.update_budget">
+<span class="sig-name descname"><span class="pre">update_budget</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agg_funcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Aggregation</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><span class="pre">DPParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/dpsql/accountant/pld_accountant.html#PLDAccountant.update_budget"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.PLDAccountant.update_budget" title="Link to this definition"></a></dt>
+<dd><p>Update the privacy budget based on the given parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agg_func</strong> (<em>list</em><em>[</em><em>Aggregation</em><em>]</em>) – The aggregation functions.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><em>DPParams</em></a>) – The differential privacy parameters.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dpsql.accountant.RenyiAccountant">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dpsql.accountant.</span></span><span class="sig-name descname"><span class="pre">RenyiAccountant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dpsql/accountant/renyi_accountant.html#RenyiAccountant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.RenyiAccountant" title="Link to this definition"></a></dt>
+<dd><p>Accountant for zero-concentrated differential privacy (zCDP)
+based on Renyi differential privacy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>epsilon</strong> (<em>float</em>) – Privacy budget epsilon.</p></li>
+<li><p><strong>delta</strong> (<em>float</em>) – Privacy budget delta.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.accountant.RenyiAccountant.calculate_budget">
+<span class="sig-name descname"><span class="pre">calculate_budget</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agg_funcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Aggregation</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><span class="pre">DPParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/dpsql/accountant/renyi_accountant.html#RenyiAccountant.calculate_budget"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.RenyiAccountant.calculate_budget" title="Link to this definition"></a></dt>
+<dd><p>Calculate the privacy budget for agg_funcs
+using zero-Concentrated Differential Privacy (zCDP).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agg_funcs</strong> (<em>list</em><em>[</em><em>Aggregation</em><em>]</em>) – The aggregation functions to be executed.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><em>DPParams</em></a>) – The differential privacy parameters.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>parameters of beta-approximate alpha-zCDP.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(alpha, beta) (tuple[float, float])</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.accountant.RenyiAccountant.calculate_min_epsilon">
+<span class="sig-name descname"><span class="pre">calculate_min_epsilon</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="reference internal" href="_modules/dpsql/accountant/renyi_accountant.html#RenyiAccountant.calculate_min_epsilon"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.RenyiAccountant.calculate_min_epsilon" title="Link to this definition"></a></dt>
+<dd><p>Calculate the minimum epsilon value which
+satisfies (epsilon, delta)-differential privacy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>alpha</strong> (<em>float</em>) – A parameter of beta-approximate alpha-zCDP.</p></li>
+<li><p><strong>beta</strong> (<em>float</em>) – A parameter of beta-approximate alpha-zCDP.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The minimum epsilon value.
+Returns infinity if beta is greater than or equal to delta.
+Returns 0 if delta is greater than or equal to 1.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.accountant.RenyiAccountant.remaining_queries">
+<span class="sig-name descname"><span class="pre">remaining_queries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query_epsilon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query_delta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="reference internal" href="_modules/dpsql/accountant/renyi_accountant.html#RenyiAccountant.remaining_queries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.RenyiAccountant.remaining_queries" title="Link to this definition"></a></dt>
+<dd><p>Calculate how many more queries can be executed
+with the given epsilon and delta.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query_epsilon</strong> (<em>float</em>) – The epsilon cost per query.</p></li>
+<li><p><strong>query_delta</strong> (<em>float</em>) – The delta cost per query.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The maximum number of queries that can still be executed.
+Returns 0 if no more queries can be executed.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dpsql.accountant.RenyiAccountant.update_budget">
+<span class="sig-name descname"><span class="pre">update_budget</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agg_funcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Aggregation</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><span class="pre">DPParams</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/dpsql/accountant/renyi_accountant.html#RenyiAccountant.update_budget"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dpsql.accountant.RenyiAccountant.update_budget" title="Link to this definition"></a></dt>
+<dd><p>Update the privacy budget based on the given parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agg_func</strong> (<em>list</em><em>[</em><em>Aggregation</em><em>]</em>) – The aggregation functions.</p></li>
+<li><p><strong>params</strong> (<a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams" title="dpsql.dp_params.DPParams"><em>DPParams</em></a>) – The differential privacy parameters.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id4" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">1</a><span class="fn-bracket">]</span></span>
+<p>Bun, Mark, and Thomas Steinke. “Concentrated differential privacy: Simplifications, extensions, and lower bounds.” Theory of cryptography conference. Berlin, Heidelberg: Springer Berlin Heidelberg, 2016.</p>
+</aside>
+<aside class="footnote brackets" id="id5" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">2</a><span class="fn-bracket">]</span></span>
+<p>Google Differential Privacy Team. “Privacy Loss Distribution.” 2024, <a class="reference external" href="https://github.com/google/differential-privacy/blob/main/common_docs/Privacy_Loss_Distributions.pdf">https://github.com/google/differential-privacy/blob/main/common_docs/Privacy_Loss_Distributions.pdf</a></p>
+</aside>
+<aside class="footnote brackets" id="id6" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">3</a><span class="fn-bracket">]</span></span>
+<p>Desfontaines, Damien. “Open problem(s) - How generic can composition results be?” blog post, 2023, <a class="reference external" href="https://differentialprivacy.org/open-problems-how-generic-can-composition-be/">https://differentialprivacy.org/open-problems-how-generic-can-composition-be/</a></p>
+</aside>
+</aside>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quickstart.html" class="btn btn-neutral float-left" title="Quick start" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="backend.html" class="btn btn-neutral float-right" title="Backend" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

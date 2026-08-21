@@ -1,0 +1,180 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DPSQL+ &mdash; DPSQL+  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Overview" href="overview.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            DPSQL+
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="accountant.html">Accountant</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backend.html">Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="engine.html">Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validator.html">Validator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dpparams.html">DPParams</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">DPSQL+</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">DPSQL+</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="dpsql">
+<h1>DPSQL+<a class="headerlink" href="#dpsql" title="Link to this heading"></a></h1>
+<p>DPSQL+ is a library that provides a SQL-like interface for querying sensitive data, along with privacy budget management based on differential privacy.
+It is designed to provide a high level of privacy protection without requiring users to have a deep understanding of differential privacy.</p>
+<section id="key-features">
+<h2>Key features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>DPSQL+ applies user-level differential privacy under the add-remove model and enforces a minimum frequency rule requiring that every released group contain at least <span class="math notranslate nohighlight">\(k\)</span> distinct users.</p></li>
+<li><p>The <a class="reference internal" href="accountant.html"><span class="doc">Accountant</span></a> module supports sequential and adaptive SQL queries. It provides RDP-based accounting for adaptive composition and PLD-based numerical accounting for sequential composition.</p></li>
+<li><p>DPSQL+ targets <span class="math notranslate nohighlight">\((\varepsilon, \delta)\)</span>-DP and therefore uses the Gaussian mechanism. This choice often improves the utility-privacy trade-off for sequential and adaptive queries.</p></li>
+</ul>
+<p>For details, see our paper, <em>DPSQL+: A Differentially Private SQL Library with a Minimum Frequency Rule</em> (<a class="reference external" href="https://arxiv.org/abs/2602.22699">https://arxiv.org/abs/2602.22699</a>).</p>
+</section>
+<section id="contents">
+<h2>Contents<a class="headerlink" href="#contents" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#architecture">Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#flow-of-the-system">Flow of the System</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#query-syntax">Query Syntax</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#id1">Installation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#tutorial">Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#how-to-use">How to Use</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#additional-usage">Additional Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="accountant.html">Accountant</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="accountant.html#dpsql.accountant.Accountant"><code class="docutils literal notranslate"><span class="pre">Accountant</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="accountant.html#dpsql.accountant.BasicAccountant"><code class="docutils literal notranslate"><span class="pre">BasicAccountant</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="accountant.html#dpsql.accountant.PLDAccountant"><code class="docutils literal notranslate"><span class="pre">PLDAccountant</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="accountant.html#dpsql.accountant.RenyiAccountant"><code class="docutils literal notranslate"><span class="pre">RenyiAccountant</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="backend.html">Backend</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="backend.html#dpsql.backend.DuckDBBackend"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="backend.html#dpsql.backend.SQLBackend"><code class="docutils literal notranslate"><span class="pre">SQLBackend</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="backend.html#dpsql.backend.SQLiteBackend"><code class="docutils literal notranslate"><span class="pre">SQLiteBackend</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="backend.html#dpsql.backend.SparkSQLBackend"><code class="docutils literal notranslate"><span class="pre">SparkSQLBackend</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="engine.html">Engine</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="engine.html#dpsql.engine.Engine"><code class="docutils literal notranslate"><span class="pre">Engine</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="validator.html">Validator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="validator.html#validation-pipeline-privacy-constraints">Validation Pipeline &amp; Privacy Constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="validator.html#primary-exception-classes">Primary Exception Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="validator.html#private-query-options-parameters">PRIVATE_QUERY OPTIONS Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="validator.html#aggregation-argument-form">Aggregation Argument Form</a></li>
+<li class="toctree-l2"><a class="reference internal" href="validator.html#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dpparams.html">DPParams</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="dpparams.html#dpsql.dp_params.DPParams"><code class="docutils literal notranslate"><span class="pre">DPParams</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="dpparams.html#dpsql.dp_params.generate_dpparams"><code class="docutils literal notranslate"><span class="pre">generate_dpparams()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="overview.html" class="btn btn-neutral float-right" title="Overview" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
