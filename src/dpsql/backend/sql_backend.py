@@ -1,5 +1,6 @@
 import logging
 from abc import ABCMeta, abstractmethod
+from collections.abc import Sequence
 from typing import TypeAlias
 
 import pandas as pd
@@ -73,6 +74,14 @@ class SQLBackend(metaclass=ABCMeta):
             getattr(inner_df, "shape", None),
         )
 
+        # Reuse one random priority in both bounding stages. This preserves every
+        # selected record from the first stage while allowing the second stage to
+        # fill capacity released by keys that did not pass thresholding.
+        priority_column = self._unused_column_name(
+            inner_df, "_dpsql_contribution_priority_"
+        )
+        prioritized_df = self.add_random_priority(inner_df, priority_column)
+
         # First contribution bounding
         logger.debug(
             "Applying first contribution_bound: privacy_unit=%s, bound=%s",
@@ -80,7 +89,9 @@ class SQLBackend(metaclass=ABCMeta):
             params.contribution_bound,
         )
         logger.info("Applying first contribution_bound...")
-        first_filtered_df = self.contribution_bound(inner_df, privacy_unit, params)
+        first_filtered_df = self.contribution_bound(
+            prioritized_df, privacy_unit, params, priority_column
+        )
         logger.debug(
             "First filtered df: shape=%s", getattr(first_filtered_df, "shape", None)
         )
@@ -115,7 +126,7 @@ class SQLBackend(metaclass=ABCMeta):
         # Filter records to only include those with selected keys
         logger.debug("Filtering by selected keys...")
         key_filtered_df = self.filter_by_selected_keys(
-            inner_df, group_by, selected_keys
+            prioritized_df, group_by, selected_keys
         )
         logger.debug(
             "Key-filtered df: shape=%s", getattr(key_filtered_df, "shape", None)
@@ -124,8 +135,9 @@ class SQLBackend(metaclass=ABCMeta):
         # Second contribution bounding on the key-filtered data
         logger.info("Applying second contribution_bound...")
         final_filtered_df = self.contribution_bound(
-            key_filtered_df, privacy_unit, params
+            key_filtered_df, privacy_unit, params, priority_column
         )
+        final_filtered_df = self._drop_column(final_filtered_df, priority_column)
         logger.debug(
             "Final filtered df: shape=%s", getattr(final_filtered_df, "shape", None)
         )
@@ -207,6 +219,7 @@ class SQLBackend(metaclass=ABCMeta):
         inner_df: DataFrameLike,
         privacy_unit: str,
         params: DPParams,
+        priority_column: str,
     ) -> DataFrameLike:
         """
         Apply contribution bounding to the intermediate DataFrame.
@@ -215,11 +228,33 @@ class SQLBackend(metaclass=ABCMeta):
             inner_df (DataFrameLike): The intermediate DataFrame.
             privacy_unit (str): The column name to use as the privacy unit.
             params (DPParams): The differential privacy parameters to use.
+            priority_column (str): A precomputed random-priority column.
 
         Returns:
             DataFrameLike: The filtered DataFrame.
         """
         raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def add_random_priority(self, df: DataFrameLike, column_name: str) -> DataFrameLike:
+        """Add a random row-priority column used for contribution bounding."""
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @staticmethod
+    def _unused_column_name(df: DataFrameLike, prefix: str) -> str:
+        """Return an internal column name that does not collide with input columns."""
+        columns = set(df.columns)
+        column_name = prefix
+        while column_name in columns:
+            column_name += "_"
+        return column_name
+
+    @staticmethod
+    def _drop_column(df: DataFrameLike, column_name: str) -> DataFrameLike:
+        """Drop one internal column from a backend DataFrame."""
+        if isinstance(df, pd.DataFrame):
+            return df.drop(columns=[column_name])
+        return df.drop(column_name)
 
     def create_final_df(
         self,
@@ -227,7 +262,7 @@ class SQLBackend(metaclass=ABCMeta):
         agg_columns: list[AggregationColumn],
         group_by: list[str],
         sigmas: list[float],
-        clipping_thresholds: list[list[tuple[float, float]] | None],
+        clipping_thresholds: Sequence[list[tuple[float, float]] | None],
     ) -> pd.DataFrame:
         """
         Create the final DataFrame with noisy aggregation applied.
@@ -239,7 +274,7 @@ class SQLBackend(metaclass=ABCMeta):
             group_by (list[str]): The list of columns to group by.
             sigmas (list[float]): The list of noise standard deviations
                 for each aggregation.
-            clipping_thresholds (list[list[tuple[float, float]] | None]):
+            clipping_thresholds (Sequence[list[tuple[float, float]] | None]):
                 The list of clipping thresholds for each aggregation column.
 
         Returns:

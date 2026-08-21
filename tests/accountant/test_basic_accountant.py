@@ -105,7 +105,7 @@ def test_remaining_queries():
         epsilon=total_epsilon / 2,
         delta=total_delta / 2,
         clipping_thresholds=[None],
-        contribution_bound=1.0,
+        contribution_bound=1,
     )
     accountant.update_budget([Aggregation.COUNT], params)
     remaining_after_update = accountant.remaining_queries(0.1, 0.05)

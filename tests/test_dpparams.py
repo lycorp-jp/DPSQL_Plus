@@ -5,6 +5,7 @@ from dpsql.accountant.utils import calc_pld_for_tau_thresholding
 from dpsql.aggregation import Aggregation
 from dpsql.backend.sql_backend import AggregationColumn
 from dpsql.dp_params import DPParams, generate_dpparams
+from dpsql.errors import InvalidPrivacyParametersError
 from dpsql.utils import calibrate_analytic_gaussian_mechanism
 
 
@@ -61,6 +62,28 @@ def test_get_noise_parameters_with_small_epsilon():
     # calculation result may be different from the given epsilon.
     estimated_epsilon = pld.get_epsilon_for_delta(delta / 2)
     assert estimated_epsilon <= epsilon / 2
+
+
+def test_get_noise_parameters_uses_l2_sensitivity_for_thresholding():
+    epsilon = 1.0
+    delta = 1e-5
+    contribution_bound = 4
+    dp_params = DPParams(
+        contribution_bound=contribution_bound,
+        clipping_thresholds=[None],
+        epsilon=epsilon,
+        delta=delta,
+    )
+
+    _, _, sigma_for_thresholding = dp_params.get_noise_parameters([1.0])
+
+    assert sigma_for_thresholding == pytest.approx(
+        calibrate_analytic_gaussian_mechanism(
+            epsilon / 2,
+            delta / 4,
+            contribution_bound**0.5,
+        )
+    )
 
 
 @pytest.mark.parametrize("accountant_class", [RenyiAccountant, PLDAccountant])
@@ -123,6 +146,41 @@ def test_sigmas_deprecation_warning():
             tau=2.0,
             sigma_for_thresholding=1.0,
         )
+
+
+def test_mixed_privacy_parameter_modes_are_rejected():
+    with pytest.raises(
+        InvalidPrivacyParametersError,
+        match="Conflicting privacy parameter modes",
+    ):
+        DPParams(
+            contribution_bound=1,
+            clipping_thresholds=[None],
+            epsilon=1.0,
+            delta=1e-5,
+            sigmas=[1.0],
+            tau=2.0,
+            sigma_for_thresholding=1.0,
+        )
+
+
+@pytest.mark.parametrize("name", ["contribution_bound", "min_frequency"])
+@pytest.mark.parametrize("value", [1.5, 2.0])
+def test_integer_parameters_reject_float_values(name, value):
+    parameters = {
+        "contribution_bound": 1,
+        "min_frequency": 1,
+        "clipping_thresholds": [None],
+        "epsilon": 1.0,
+        "delta": 1e-5,
+    }
+    parameters[name] = value
+
+    with pytest.raises(
+        InvalidPrivacyParametersError,
+        match=rf"Invalid `{name}` \(must be an integer >= 1\)",
+    ):
+        DPParams(**parameters)
 
 
 def test_generate_dpparams():

@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 from utils import create_test_cases
 
+from dpsql.aggregation import Aggregation, AggregationColumn
 from dpsql.backend import SQLiteBackend
 from dpsql.dp_params import DPParams
 
@@ -75,7 +76,11 @@ def test_contribution_bound(conn, data, expected_count):
         clipping_thresholds=[None],
     )
 
-    filtered_df = backend.contribution_bound(data, "uid", params)
+    priority_column = "_priority"
+    prioritized_data = backend.add_random_priority(data, priority_column)
+    filtered_df = backend.contribution_bound(
+        prioritized_data, "uid", params, priority_column
+    )
     assert len(filtered_df) == expected_count
 
 
@@ -124,17 +129,104 @@ def test_contribution_bound(conn, data, expected_count):
             [],
             0,
         ),
+        (
+            pd.DataFrame(
+                [
+                    (1, "uid1", 10),
+                    (2, "uid2", 20),
+                ],
+                columns=["id", "uid", "value"],
+            ),
+            [],
+            [],
+            0,
+        ),
     ],
     ids=[
         "single column filtering",
         "multi column filtering",
         "empty selected_keys case",
+        "no group by and empty selected_keys case",
     ],
 )
 def test_filter_by_selected_keys(conn, data, group_by, selected_keys, expected_count):
     backend = SQLiteBackend(conn)
     filtered_df = backend.filter_by_selected_keys(data, group_by, selected_keys)
     assert len(filtered_df) == expected_count
+
+
+def test_execute_sql_preserves_first_bounded_records(conn, mocker):
+    backend = SQLiteBackend(conn)
+    inner_df = pd.DataFrame(
+        [
+            (1, "uid1", "A", 10, 0),
+            (2, "uid1", "X", 20, 1),
+            (3, "uid1", "A", 30, 2),
+            (4, "uid2", "A", 40, 0),
+        ],
+        columns=["id", "uid", "group", "value", "priority"],
+    )
+    mocker.patch.object(backend, "create_inner_df", return_value=inner_df)
+    mocker.patch.object(
+        backend,
+        "add_random_priority",
+        side_effect=lambda df, column: df.assign(**{column: df["priority"]}),
+    )
+    create_final_df = mocker.patch.object(
+        backend,
+        "create_final_df",
+        return_value=pd.DataFrame({"count(value)": [3.0]}, index=["A"]),
+    )
+
+    backend.execute_sql(
+        privacy_unit="uid",
+        params=DPParams(
+            contribution_bound=2,
+            min_frequency=2,
+            sigma_for_thresholding=0,
+            tau=2,
+            sigmas=[0],
+            clipping_thresholds=[None],
+        ),
+        inner_sql="",
+        agg_columns=[AggregationColumn(Aggregation.COUNT, ["value"])],
+        group_by_columns=["group"],
+        ordering_terms=[],
+    )
+
+    final_filtered_df = create_final_df.call_args.args[0]
+    assert final_filtered_df["id"].tolist() == [1, 3, 4]
+    assert "_dpsql_contribution_priority_" not in final_filtered_df
+
+
+def test_execute_sql_suppresses_global_aggregation_below_min_frequency(conn, mocker):
+    backend = SQLiteBackend(conn)
+    mocker.patch.object(
+        backend,
+        "create_inner_df",
+        return_value=pd.DataFrame(
+            [(1, "uid1", 10), (2, "uid2", 20)],
+            columns=["id", "uid", "value"],
+        ),
+    )
+
+    result = backend.execute_sql(
+        privacy_unit="uid",
+        params=DPParams(
+            contribution_bound=1,
+            min_frequency=3,
+            sigma_for_thresholding=0,
+            tau=3,
+            sigmas=[0],
+            clipping_thresholds=[None],
+        ),
+        inner_sql="",
+        agg_columns=[AggregationColumn(Aggregation.COUNT, ["value"])],
+        group_by_columns=[],
+        ordering_terms=[],
+    )
+
+    assert result.empty
 
 
 def test_get_column_name(conn):

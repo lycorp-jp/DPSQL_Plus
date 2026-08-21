@@ -12,7 +12,7 @@ def test_calculate_budget():
     accountant = RenyiAccountant(1.0, 0.1)
     sensitivities = [3.0]
     params = DPParams(
-        contribution_bound=2.0,
+        contribution_bound=2,
         tau=1.0,
         sigma_for_thresholding=1.0,
         sigmas=[3.0],
@@ -20,7 +20,7 @@ def test_calculate_budget():
     )
 
     alpha, beta = accountant._calculate_budget(sensitivities, params)
-    alpha_expected, beta_expected = 2.5, 0.75
+    alpha_expected, beta_expected = 1.5, 0.75
 
     assert alpha == pytest.approx(alpha_expected)
     assert beta == pytest.approx(beta_expected)
@@ -44,7 +44,7 @@ def test_calculate_budget():
 def test_calculate_budget_aggregations(aggregation, clipping_thresholds, sensitivities):
     accountant = RenyiAccountant(1.0, 0.1)
     base_kwargs = {
-        "contribution_bound": 1.0,
+        "contribution_bound": 1,
         "sigma_for_thresholding": 1.0,
         "tau": 1.0,
         "sigmas": [1.0],
@@ -81,9 +81,9 @@ def test_calculate_min_epsilon_infinity():
 
 
 def test_check_budget():
-    accountant = RenyiAccountant(7, 0.5)
+    accountant = RenyiAccountant(5, 0.5)
     params = DPParams(
-        contribution_bound=2.0,
+        contribution_bound=2,
         tau=3.0,
         sigma_for_thresholding=1.0,
         sigmas=[3.0],
@@ -102,7 +102,7 @@ def test_check_budget():
 def test_update_budget():
     accountant = RenyiAccountant(7, 0.5)
     params = DPParams(
-        contribution_bound=2.0,
+        contribution_bound=2,
         tau=3.0,
         sigma_for_thresholding=1.0,
         sigmas=[3.0],
@@ -150,7 +150,7 @@ def test_remaining_queries(mocker):
         epsilon=total_epsilon / 2,
         delta=total_delta / 2,
         clipping_thresholds=[None],
-        contribution_bound=1.0,
+        contribution_bound=1,
     )
     accountant.update_budget([Aggregation.COUNT], params)
     remaining_after_update = accountant.remaining_queries(0.1, 0.03)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -33,7 +35,7 @@ agg_types = [
 )
 def test_aggregation_factory(agg_type, expected_strategy):
     # Test that the factory creates the correct strategy instance
-    strategy = AggregationFactory.create_strategy(agg_type, backend=None)
+    strategy = AggregationFactory.create_strategy(agg_type, backend=MagicMock())
     assert isinstance(strategy, expected_strategy)
 
 
@@ -43,7 +45,7 @@ def test_aggregation_factory(agg_type, expected_strategy):
 )
 def test_get_column_name(agg_type):
     # Test without Alias
-    strategy = AggregationFactory.create_strategy(agg_type, backend=None)
+    strategy = AggregationFactory.create_strategy(agg_type, backend=MagicMock())
     agg_column = AggregationColumn(agg_type, ["test_column"])
     assert (
         strategy.get_column_name(agg_column) == f"{agg_type.name.lower()}(test_column)"
@@ -83,9 +85,9 @@ def test_compute(mocker, agg_type):
     agg_column = AggregationColumn(agg_type, ["test_column"])
     clipping_threshold = [(0.0, 100.0)]
     result = strategy.compute(
-        filtered_df=None,
+        filtered_df=pd.DataFrame(),
         agg_column=agg_column,
-        group_by=None,
+        group_by=[],
         sigma=0.0,
         clipping_threshold=clipping_threshold,
     )
@@ -125,9 +127,9 @@ def test_compute_group_by(mocker, agg_type):
     agg_column = AggregationColumn(agg_type, ["test_column"])
     clipping_threshold = [(0.0, 100.0)]
     result = strategy.compute(
-        filtered_df=None,
+        filtered_df=pd.DataFrame(),
         agg_column=agg_column,
-        group_by="attribute",
+        group_by=["attribute"],
         sigma=0.0,
         clipping_threshold=clipping_threshold,
     )

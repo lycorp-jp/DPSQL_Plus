@@ -11,6 +11,7 @@ from pyspark.sql.types import (
 )
 from utils import create_test_cases
 
+from dpsql.aggregation import Aggregation, AggregationColumn
 from dpsql.backend import SparkSQLBackend
 from dpsql.dp_params import DPParams
 from dpsql.errors import ExecutionBackendError
@@ -108,7 +109,11 @@ def test_contribution_bound(spark, data, schema, expected_count):
         clipping_thresholds=[None],
     )
 
-    filtered_df = backend.contribution_bound(df, "uid", params)
+    priority_column = "_priority"
+    prioritized_df = backend.add_random_priority(df, priority_column)
+    filtered_df = backend.contribution_bound(
+        prioritized_df, "uid", params, priority_column
+    )
     assert filtered_df.count() == expected_count
 
 
@@ -151,11 +156,19 @@ def test_contribution_bound(spark, data, schema, expected_count):
             [],
             0,
         ),
+        (
+            [(1, "uid1", 10), (2, "uid2", 20)],
+            ["id", "uid", "value"],
+            [],
+            [],
+            0,
+        ),
     ],
     ids=[
         "single column filtering",
         "multi column filtering",
         "empty selected_keys case",
+        "no group by and empty selected_keys case",
     ],
 )
 def test_filter_by_selected_keys(
@@ -165,6 +178,81 @@ def test_filter_by_selected_keys(
     df = backend.spark.createDataFrame(data, schema)
     filtered_df = backend.filter_by_selected_keys(df, group_by, selected_keys)
     assert filtered_df.count() == expected_count
+
+
+def test_execute_sql_preserves_first_bounded_records(spark, mocker):
+    backend = SparkSQLBackend(spark)
+    inner_df = spark.createDataFrame(
+        [
+            (1, "uid1", "A", 10, 0),
+            (2, "uid1", "X", 20, 1),
+            (3, "uid1", "A", 30, 2),
+            (4, "uid2", "A", 40, 0),
+        ],
+        ["id", "uid", "group", "value", "priority"],
+    )
+    mocker.patch.object(backend, "create_inner_df", return_value=inner_df)
+    mocker.patch.object(
+        backend,
+        "add_random_priority",
+        side_effect=lambda df, column: df.withColumn(column, df["priority"]),
+    )
+    create_final_df = mocker.patch.object(
+        backend,
+        "create_final_df",
+        return_value=pd.DataFrame({"count(value)": [3.0]}, index=["A"]),
+    )
+
+    backend.execute_sql(
+        privacy_unit="uid",
+        params=DPParams(
+            contribution_bound=2,
+            min_frequency=2,
+            sigma_for_thresholding=0,
+            tau=2,
+            sigmas=[0],
+            clipping_thresholds=[None],
+        ),
+        inner_sql="",
+        agg_columns=[AggregationColumn(Aggregation.COUNT, ["value"])],
+        group_by_columns=["group"],
+        ordering_terms=[],
+    )
+
+    final_filtered_df = create_final_df.call_args.args[0]
+    assert sorted(row.id for row in final_filtered_df.select("id").collect()) == [
+        1,
+        3,
+        4,
+    ]
+    assert "_dpsql_contribution_priority_" not in final_filtered_df.columns
+
+
+def test_execute_sql_suppresses_global_aggregation_below_min_frequency(spark, mocker):
+    backend = SparkSQLBackend(spark)
+    inner_df = spark.createDataFrame(
+        [(1, "uid1", 10), (2, "uid2", 20)],
+        ["id", "uid", "value"],
+    )
+    mocker.patch.object(backend, "create_inner_df", return_value=inner_df)
+
+    result = backend.execute_sql(
+        privacy_unit="uid",
+        params=DPParams(
+            contribution_bound=1,
+            min_frequency=3,
+            sigma_for_thresholding=0,
+            tau=3,
+            sigmas=[0],
+            clipping_thresholds=[None],
+        ),
+        inner_sql="",
+        agg_columns=[AggregationColumn(Aggregation.COUNT, ["value"])],
+        group_by_columns=[],
+        ordering_terms=[],
+    )
+
+    assert result.empty
 
 
 def test_get_column_name(spark):

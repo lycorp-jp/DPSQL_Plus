@@ -3,8 +3,11 @@ import random
 from enum import Enum, auto
 
 import opendp.prelude as dp
+from opendp.domains import atom_domain
+from opendp.metrics import absolute_distance
+from opendp.mod import enable_features
 
-dp.enable_features("contrib")
+enable_features("contrib")
 
 
 logger = logging.getLogger(__name__)
@@ -17,7 +20,7 @@ class SamplingMode(Enum):
 
 
 SAMPLING_MODE = SamplingMode.SECURE
-INPUT_SPACE = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+INPUT_SPACE = atom_domain(T=float, nan=False), absolute_distance(T=float)
 
 
 def secure_gauss(input: float, sigma: float) -> float:

@@ -12,8 +12,10 @@ from pyspark.sql.functions import (
     greatest,
     least,
     lit,
+    monotonically_increasing_id,
     rand,
     row_number,
+    struct,
 )
 from pyspark.sql.functions import sum as spark_sum
 from pyspark.sql.window import Window
@@ -63,7 +65,11 @@ class SparkSQLBackend(SQLBackend):
             ) from e
 
     def contribution_bound(
-        self, inner_df: DataFrameLike, privacy_unit: str, params: DPParams
+        self,
+        inner_df: DataFrameLike,
+        privacy_unit: str,
+        params: DPParams,
+        priority_column: str,
     ) -> DataFrameLike:
         logger.debug(
             "Spark contribution_bound: privacy_unit=%s bound=%s",
@@ -76,19 +82,39 @@ class SparkSQLBackend(SQLBackend):
                 context={"actual_type": type(inner_df).__name__},
                 hint="Provide a pyspark.sql.DataFrame",
             )
-        # Add random order column to shuffle the records
-        df_with_random = inner_df.withColumn("random_order", rand())
-        window_spec = Window.partitionBy(privacy_unit).orderBy("random_order")
-        df_with_row_num = df_with_random.withColumn(
-            "row_num", row_number().over(window_spec)
-        )
+        # Rank contributions by the shared random priority within each privacy unit.
+        window_spec = Window.partitionBy(privacy_unit).orderBy(priority_column)
+        df_with_row_num = inner_df.withColumn("row_num", row_number().over(window_spec))
 
         # Filter at most contribution_bound records for each privacy_unit
         filtered_df = df_with_row_num.filter(
             col("row_num") <= params.contribution_bound
-        ).drop("row_num", "random_order")
+        ).drop("row_num")
         logger.debug("Spark contribution_bound applied")
         return filtered_df
+
+    def add_random_priority(
+        self, df: DataFrameLike, column_name: str
+    ) -> SparkDataFrame:
+        if not isinstance(df, SparkDataFrame):
+            raise UnsupportedBackendError(
+                "Expected Spark DataFrame",
+                context={"actual_type": type(df).__name__},
+                hint="Provide a pyspark.sql.DataFrame",
+            )
+        return df.withColumn(column_name, struct(rand(), monotonically_increasing_id()))
+
+    def _prepare_aggregation_group(
+        self, df: SparkDataFrame, group_by: list[str]
+    ) -> tuple[SparkDataFrame, list[str]]:
+        """
+        Prepare the DataFrame for aggregation by adding a global group column
+        if no group_by columns are provided.
+        """
+        if group_by:
+            return df, group_by
+        group_column = self._unused_column_name(df, "_dpsql_global_group_")
+        return df.withColumn(group_column, lit(1)), [group_column]
 
     def apply_aggregation(
         self,
@@ -111,10 +137,12 @@ class SparkSQLBackend(SQLBackend):
                 context={"actual_type": type(df).__name__},
                 hint="Provide a pyspark.sql.DataFrame",
             )
+        df, aggregation_group_by = self._prepare_aggregation_group(df, group_by)
+
         if agg_type == Aggregation.COUNT:
-            res = df.groupBy(group_by).agg(count(column_name[0]))
+            res = df.groupBy(aggregation_group_by).agg(count(column_name[0]))
         elif agg_type == Aggregation.COUNT_DISTINCT:
-            res = df.groupBy(group_by).agg(countDistinct(column_name[0]))
+            res = df.groupBy(aggregation_group_by).agg(countDistinct(column_name[0]))
         elif agg_type == Aggregation.SUM:
             if clipping_threshold is None:
                 raise AggregationError(
@@ -125,7 +153,7 @@ class SparkSQLBackend(SQLBackend):
             lower_bound, upper_bound = safely_get_threshold(
                 clipping_threshold, 0, agg_type.name
             )
-            res = df.groupBy(group_by).agg(
+            res = df.groupBy(aggregation_group_by).agg(
                 spark_sum(
                     least(lit(upper_bound), greatest(lit(lower_bound), column_name[0]))
                 )
@@ -140,7 +168,7 @@ class SparkSQLBackend(SQLBackend):
             lower_bound, upper_bound = safely_get_threshold(
                 clipping_threshold, 0, agg_type.name
             )
-            res = df.groupBy(group_by).agg(
+            res = df.groupBy(aggregation_group_by).agg(
                 spark_sum(
                     least(lit(upper_bound), greatest(lit(lower_bound), column_name[0]))
                     ** 2
@@ -160,7 +188,9 @@ class SparkSQLBackend(SQLBackend):
             col2_clipped = least(
                 lit(upper_bound_y), greatest(lit(lower_bound_y), column_name[1])
             )
-            res = df.groupBy(group_by).agg(spark_sum(col1_clipped * col2_clipped))
+            res = df.groupBy(aggregation_group_by).agg(
+                spark_sum(col1_clipped * col2_clipped)
+            )
         else:
             raise AggregationError(
                 "Unsupported aggregation type",
@@ -173,7 +203,7 @@ class SparkSQLBackend(SQLBackend):
         if group_by:
             return pd_res.set_index(group_by).iloc[:, 0]  # convert to Series
         else:
-            return pd_res.iloc[:, 0]  # convert to Series without group_by
+            return pd_res.iloc[:, 1]  # exclude the internal global-group column
 
     def use_database(self, database_name: str | None) -> None:
         logger.info("Spark use_database: %s", database_name)
@@ -235,12 +265,12 @@ class SparkSQLBackend(SQLBackend):
                 context={"actual_type": type(df).__name__},
             )
 
+        if len(selected_keys) == 0:
+            # If no selected keys, return an empty DataFrame with the same schema
+            return self.spark.createDataFrame([], df.schema)
         if len(group_by) == 0:
             # If no group by columns, return the original DataFrame
             return df
-        elif len(selected_keys) == 0:
-            # If selected_keys is empty, return an empty DataFrame with the same schema
-            return self.spark.createDataFrame([], df.schema)
         else:
             try:
                 ref_df = self.spark.createDataFrame(selected_keys, schema=group_by)

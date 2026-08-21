@@ -1,5 +1,7 @@
 import logging
+import math
 import warnings
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -30,7 +32,7 @@ class DPParams:
     Args:
         contribution_bound (int): The maximum number of records that
             can be contributed by a single privacy unit.
-        clipping_thresholds (list[list[tuple[float, float]] | None]):
+        clipping_thresholds (Sequence[list[tuple[float, float]] | None]):
             The list of clipping parameters for input data,
             used to clip the input within the range [L, U] where each tuple is (L, U).
             Each element is either None (for COUNT/COUNT_DISTINCT)
@@ -53,7 +55,7 @@ class DPParams:
     """
 
     contribution_bound: int
-    clipping_thresholds: list[list[tuple[float, float]] | None]
+    clipping_thresholds: Sequence[list[tuple[float, float]] | None]
     min_frequency: int = 1
     epsilon: float | None = None
     delta: float | None = None
@@ -77,6 +79,19 @@ class DPParams:
             self.sigma_for_thresholding,
         )
 
+        # Validate that either (epsilon, delta) or (sigmas, tau, sigma_for_thresholding)
+        # is provided
+        parameter_context = self._privacy_parameter_context()
+        self._validate_parameter_mode(parameter_context)
+
+        # Validate contribution_bound and min_frequency
+        self.contribution_bound = self._validate_positive_integer(
+            "contribution_bound", self.contribution_bound
+        )
+        self.min_frequency = self._validate_positive_integer(
+            "min_frequency", self.min_frequency
+        )
+
         # Show deprecation warning if sigmas is used
         if self.sigmas is not None:
             warnings.warn(
@@ -85,53 +100,23 @@ class DPParams:
                 DeprecationWarning,
                 stacklevel=2,
             )
-        # contribution_bound must be at least 1
-        if self.contribution_bound < 1:
-            raise InvalidPrivacyParametersError(
-                "Invalid `contribution_bound` (must be >= 1)",
-                context={"contribution_bound": self.contribution_bound},
-                hint="Set contribution_bound to an integer >= 1",
-            )
-        # min_frequency must be at least 1
-        if self.min_frequency < 1:
-            raise InvalidPrivacyParametersError(
-                "Invalid `min_frequency` (must be >= 1)",
-                context={"min_frequency": self.min_frequency},
-                hint="Set min_frequency to an integer >= 1",
-            )
 
         if self.epsilon is None or self.delta is None:
-            # If epsilon and delta are not set, sigmas, tau,
-            # and sigma_for_thresholding must be set
-            if (
-                self.sigmas is None
-                or self.tau is None
-                or self.sigma_for_thresholding is None
-            ):
-                raise InvalidPrivacyParametersError(
-                    "Missing required privacy parameters "
-                    "(provide either (epsilon, delta) "
-                    "or (sigmas, tau, sigma_for_thresholding))",
-                    context={
-                        "epsilon": self.epsilon,
-                        "delta": self.delta,
-                        "sigmas": self.sigmas,
-                        "tau": self.tau,
-                        "sigma_for_thresholding": self.sigma_for_thresholding,
-                    },
-                    hint="Supply epsilon & delta OR sigmas, tau, "
-                    "sigma_for_thresholding",
-                )
             logger.debug("Using (sigmas, tau, sigma_for_thresholding) mode")
             # tau must be greater than or equal to min_frequency
-            if self.tau < self.min_frequency:
+            if self.tau is None or self.tau < self.min_frequency:
                 raise InvalidPrivacyParametersError(
                     "Invalid `tau` (must be >= min_frequency)",
                     context={"tau": self.tau, "min_frequency": self.min_frequency},
                     hint="Increase tau or decrease min_frequency",
                 )
             # sigmas and sigma_for_thresholding must be non-negative
-            if any(s < 0 for s in self.sigmas) or self.sigma_for_thresholding < 0:
+            if (
+                self.sigmas is None
+                or self.sigma_for_thresholding is None
+                or any(s < 0 for s in self.sigmas)
+                or self.sigma_for_thresholding < 0
+            ):
                 raise InvalidPrivacyParametersError(
                     "Invalid noise scales "
                     "(sigmas and sigma_for_thresholding must be >= 0)",
@@ -152,6 +137,70 @@ class DPParams:
                 )
 
         logger.info("DPParams validation completed")
+
+    def _privacy_parameter_context(self) -> dict[str, float | list[float] | None]:
+        return {
+            "epsilon": self.epsilon,
+            "delta": self.delta,
+            "sigmas": self.sigmas,
+            "tau": self.tau,
+            "sigma_for_thresholding": self.sigma_for_thresholding,
+        }
+
+    @staticmethod
+    def _validate_parameter_mode(
+        context: dict[str, float | list[float] | None],
+    ) -> None:
+        """
+        Validate that either (epsilon, delta) or (sigmas, tau, sigma_for_thresholding)
+        is provided, but not both.
+        """
+        budget_parameters = (context["epsilon"], context["delta"])
+        noise_parameters = (
+            context["sigmas"],
+            context["tau"],
+            context["sigma_for_thresholding"],
+        )
+        has_budget_parameter = any(value is not None for value in budget_parameters)
+        has_noise_parameter = any(value is not None for value in noise_parameters)
+
+        if has_budget_parameter and has_noise_parameter:
+            raise InvalidPrivacyParametersError(
+                "Conflicting privacy parameter modes "
+                "((epsilon, delta) and direct noise parameters are mutually exclusive)",
+                context=context,
+                hint="Supply either epsilon & delta OR sigmas, tau, "
+                "sigma_for_thresholding",
+            )
+
+        has_complete_budget = all(value is not None for value in budget_parameters)
+        has_complete_noise = all(value is not None for value in noise_parameters)
+        if not has_complete_budget and not has_complete_noise:
+            raise InvalidPrivacyParametersError(
+                "Missing required privacy parameters "
+                "(provide either (epsilon, delta) "
+                "or (sigmas, tau, sigma_for_thresholding))",
+                context=context,
+                hint="Supply epsilon & delta OR sigmas, tau, sigma_for_thresholding",
+            )
+
+    @staticmethod
+    def _validate_positive_integer(name: str, value: object) -> int:
+        """
+        Validate that a value is a positive integer (>= 1).
+        Args:
+            name (str): The name of the parameter (for error messages).
+            value (object): The value to validate.
+        Returns:
+            int: The validated integer value.
+        """
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise InvalidPrivacyParametersError(
+                f"Invalid `{name}` (must be an integer >= 1)",
+                context={name: value},
+                hint=f"Set {name} to an integer >= 1",
+            )
+        return value
 
     def get_noise_parameters(
         self, sensitivities: list[float]
@@ -289,7 +338,7 @@ class DPParams:
 
     def _compute_noise_parameters(
         self, epsilon: float, delta: float, sensitivities: list[float]
-    ):
+    ) -> tuple[list[float], float, float]:
         logger.debug(
             "Compute noise params: epsilon=%s delta=%s sensitivities=%s",
             epsilon,
@@ -314,13 +363,15 @@ class DPParams:
         sigma_for_thresholding = calibrate_analytic_gaussian_mechanism(
             epsilon_per_agg,
             delta_gaussian,
-            self.contribution_bound,
+            math.sqrt(self.contribution_bound),
         )
 
         # Calculate tau by inverting the formula in Theorem 4.1
         # of [Wilkins et al., TPDP'22]
-        tau = self.min_frequency + sigma_for_thresholding * stats.norm.ppf(
-            (1 - delta_infinite) ** (1 / self.contribution_bound)
+        tau = float(
+            self.min_frequency
+            + sigma_for_thresholding
+            * stats.norm.ppf((1 - delta_infinite) ** (1 / self.contribution_bound))
         )
         logger.debug(
             "Computed: sigmas=%s tau=%s sigma_for_thresholding=%s",
