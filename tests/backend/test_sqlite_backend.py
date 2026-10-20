@@ -3,7 +3,11 @@ import sqlite3
 
 import pandas as pd
 import pytest
-from utils import create_test_cases
+from utils import (
+    create_nonfinite_aggregation_cases,
+    create_null_aggregation_cases,
+    create_test_cases,
+)
 
 from dpsql.aggregation import Aggregation, AggregationColumn
 from dpsql.backend import SQLiteBackend
@@ -19,6 +23,10 @@ def conn():
 
 # Get test cases and IDs from shared utility
 TEST_CASES, TEST_IDS = create_test_cases("sqlite")
+NULL_AGGREGATION_CASES, NULL_AGGREGATION_IDS = create_null_aggregation_cases()
+NONFINITE_AGGREGATION_CASES, NONFINITE_AGGREGATION_IDS = (
+    create_nonfinite_aggregation_cases("sqlite")
+)
 
 
 @pytest.mark.parametrize(
@@ -47,6 +55,102 @@ def test_apply_aggregation(
         check_names=False,
         check_dtype=False,
     )
+
+
+def test_prepare_inner_df_drops_null_privacy_units(conn):
+    conn.execute("CREATE TABLE source (uid INTEGER, category TEXT, value REAL)")
+    conn.executemany(
+        "INSERT INTO source VALUES (?, ?, ?)",
+        [(None, "a", 100.0), (1, None, None), (2, "a", 2.0)],
+    )
+    backend = SQLiteBackend(conn)
+    inner_df = backend.create_inner_df("SELECT * FROM source")
+
+    result = backend.prepare_inner_df(inner_df, "uid", ["category"])
+
+    assert result["uid"].tolist() == [1, 2]
+    assert result["category"].isna().tolist() == [True, False]
+    assert result["value"].isna().tolist() == [True, False]
+    assert len(inner_df) == 3
+
+
+@pytest.mark.parametrize(
+    "agg_type,columns,rows,expected", NULL_AGGREGATION_CASES, ids=NULL_AGGREGATION_IDS
+)
+def test_apply_aggregation_with_null_values(conn, agg_type, columns, rows, expected):
+    conn.execute("CREATE TABLE source (category TEXT, x REAL, y REAL)")
+    conn.executemany("INSERT INTO source VALUES (?, ?, ?)", rows)
+    backend = SQLiteBackend(conn)
+    inner_df = backend.create_inner_df("SELECT * FROM source")
+
+    result = backend.apply_aggregation(
+        agg_type, columns, inner_df, ["category"], [(1.0, 5.0)] * len(columns)
+    )
+
+    assert result.to_dict() == expected
+
+
+@pytest.mark.parametrize(
+    "agg_type,columns,rows,expected",
+    NONFINITE_AGGREGATION_CASES,
+    ids=NONFINITE_AGGREGATION_IDS,
+)
+def test_apply_aggregation_with_nonfinite_values(
+    conn, agg_type, columns, rows, expected
+):
+    conn.execute("CREATE TABLE source (x REAL, y REAL)")
+    conn.executemany("INSERT INTO source VALUES (?, ?)", rows)
+    # SQLite converts NaN to SQL NULL before DPSQL reads the values.
+    assert (
+        conn.execute("SELECT COUNT(*) FROM source WHERE x IS NULL").fetchone()[0] == 2
+    )
+    backend = SQLiteBackend(conn)
+    inner_df = backend.create_inner_df("SELECT * FROM source")
+
+    result = backend.apply_aggregation(
+        agg_type, columns, inner_df, [], [(1.0, 5.0)] * len(columns)
+    )
+
+    assert result.tolist() == [expected]
+
+
+@pytest.mark.parametrize(
+    "agg_type,expected", [(Aggregation.COVAR_POP, 1.0), (Aggregation.COVAR_SAMP, 2.0)]
+)
+def test_covar_uses_complete_pairs(conn, agg_type, expected):
+    conn.execute("CREATE TABLE source (category TEXT, x REAL, y REAL)")
+    conn.executemany(
+        "INSERT INTO source VALUES (?, ?, ?)",
+        [
+            ("mixed", 1.0, 2.0),
+            ("mixed", 3.0, 4.0),
+            ("mixed", None, 100.0),
+            ("mixed", 100.0, None),
+            ("all_null", None, None),
+        ],
+    )
+    backend = SQLiteBackend(conn)
+    inner_df = backend.create_inner_df("SELECT * FROM source")
+    paired_df, columns = backend.prepare_covar_df(inner_df, ["x", "y"])
+
+    assert paired_df[columns[0]].isna().tolist() == [False, False, True, True, True]
+    assert paired_df[columns[1]].isna().tolist() == [False, False, True, True, True]
+    pd.testing.assert_frame_equal(paired_df[inner_df.columns], inner_df)
+    counts = backend.apply_aggregation(
+        Aggregation.COUNT, columns, paired_df, ["category"]
+    )
+    assert counts.to_dict() == {"all_null": 0, "mixed": 2}
+
+    # Zero-count statistics are outside this pair-masking regression.
+    result = backend.create_final_df(
+        inner_df[inner_df["category"] == "mixed"].copy(),
+        [AggregationColumn(agg_type, ["x", "y"])],
+        ["category"],
+        [0],
+        [[(0, 10), (0, 10)]],
+    )
+
+    assert result.iloc[0, 0] == pytest.approx(expected)
 
 
 @pytest.mark.parametrize(
@@ -195,7 +299,7 @@ def test_execute_sql_preserves_first_bounded_records(conn, mocker):
     )
 
     final_filtered_df = create_final_df.call_args.args[0]
-    assert final_filtered_df["id"].tolist() == [1, 3, 4]
+    assert sorted(final_filtered_df["id"].tolist()) == [1, 3, 4]
     assert "_dpsql_contribution_priority_" not in final_filtered_df
 
 
@@ -227,6 +331,62 @@ def test_execute_sql_suppresses_global_aggregation_below_min_frequency(conn, moc
     )
 
     assert result.empty
+
+
+@pytest.fixture(params=[["g"], ["g", "h"]], ids=["single_group", "multi_group"])
+def null_group_result(conn, request):
+    conn.execute("CREATE TABLE source (uid INTEGER, g INTEGER, h TEXT)")
+    conn.executemany(
+        "INSERT INTO source VALUES (?, ?, ?)",
+        [
+            (1, None, "a"),
+            (2, None, "a"),
+            (3, 8, None),
+            (4, 8, None),
+            (5, 9, None),
+            (6, 9, None),
+            (7, None, None),
+            (8, None, None),
+            (9, 7, "suppressed"),
+            (None, 8, None),
+        ],
+    )
+    backend = SQLiteBackend(conn)
+    result = backend.execute_sql(
+        privacy_unit="uid",
+        params=DPParams(
+            contribution_bound=1,
+            min_frequency=2,
+            sigma_for_thresholding=0,
+            tau=2,
+            sigmas=[0],
+            clipping_thresholds=[None],
+        ),
+        inner_sql="SELECT * FROM source",
+        agg_columns=[AggregationColumn(Aggregation.COUNT, ["*"], alias="n")],
+        group_by_columns=request.param,
+        ordering_terms=[],
+    )
+    expected = (
+        {(None,): 4, (8,): 2, (9,): 2}
+        if request.param == ["g"]
+        else {(None, "a"): 2, (None, None): 2, (8, None): 2, (9, None): 2}
+    )
+    return backend, result, expected
+
+
+def test_execute_sql_preserves_null_group_keys(null_group_result):
+    _, result, expected = null_group_result
+    actual = {
+        tuple(None if pd.isna(value) else value for value in key): count
+        for key, count in zip(
+            result.index.to_frame(index=False).itertuples(index=False, name=None),
+            result["n"],
+            strict=True,
+        )
+    }
+
+    assert actual == expected
 
 
 def test_get_column_name(conn):
@@ -329,3 +489,17 @@ def test_create_temporary_table():
     assert "temp.test_table2" not in backend.get_table_name()
 
     conn.close()
+
+
+def test_create_temporary_table_preserves_null_group_keys(conn, null_group_result):
+    backend, result, expected = null_group_result
+
+    backend.create_temporary_table(result, "temp.result")
+
+    keys = result.index.names
+    selected_columns = ", ".join([*keys, "n"])
+    saved = conn.execute(f'SELECT {selected_columns} FROM "temp.result"').fetchall()
+    assert {tuple(row[:-1]): row[-1] for row in saved} == expected
+    assert conn.execute(
+        'SELECT COUNT(*) FROM "temp.result" WHERE g IS NULL'
+    ).fetchone()[0] == sum(key[0] is None for key in expected)

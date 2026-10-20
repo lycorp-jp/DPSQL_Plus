@@ -1,6 +1,6 @@
 import logging
 from collections.abc import Callable
-from math import erf, exp, sqrt
+from math import erf, exp, isfinite, sqrt
 
 from dpsql.errors import AggregationError
 
@@ -127,12 +127,30 @@ def calibrate_analytic_gaussian_mechanism(
     return sigma
 
 
+def validate_clipping_bounds(bounds: tuple[float, float]) -> tuple[float, float]:
+    """Validate finite clipping bounds with lower_bound < upper_bound."""
+    lower_bound, upper_bound = bounds
+    if not (isfinite(lower_bound) and isfinite(upper_bound)):
+        raise AggregationError(
+            "Clipping bounds must be finite",
+            context={"lower_bound": lower_bound, "upper_bound": upper_bound},
+            hint="Use finite numbers instead of NaN or infinity",
+        )
+    if lower_bound >= upper_bound:
+        raise AggregationError(
+            "Invalid clipping threshold (lower bound must be less than upper bound)",
+            context={"lower_bound": lower_bound, "upper_bound": upper_bound},
+            hint="Ensure lower_bound < upper_bound",
+        )
+    return bounds
+
+
 def safely_get_threshold(
     clipping_threshold: list[tuple[float, float]] | None,
     index: int,
     agg_name: str,
 ) -> tuple[float, float]:
-    """Safely get clipping thresholds for aggregation columns.
+    """Get thresholds after validating all bounds are finite and strictly ordered.
 
     Args:
         clipping_threshold (list[tuple[float, float]] | None):
@@ -151,6 +169,8 @@ def safely_get_threshold(
             context={"aggregation": agg_name},
             hint="Provide clipping thresholds for each aggregation column",
         )
+    for bounds in clipping_threshold:
+        validate_clipping_bounds(bounds)
     result = clipping_threshold[index]
     logger.debug("safely_get_threshold -> %s", result)
     return result

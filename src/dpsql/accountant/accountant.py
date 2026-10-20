@@ -23,7 +23,7 @@ class Accountant(ABC):
     MAX_REMAINING_QUERIES = 10**6
 
     def __init__(self, epsilon: float, delta: float):
-        if epsilon <= 0 or delta <= 0 or delta > 1:
+        if not (epsilon > 0 and 0 < delta <= 1):
             raise InvalidPrivacyParametersError(
                 "Invalid privacy parameters: epsilon must be > 0; "
                 "delta must be in (0, 1]",

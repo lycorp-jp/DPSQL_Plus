@@ -28,6 +28,12 @@ def _quote_identifier(identifier: str) -> str:
     return ".".join(quoted_parts)
 
 
+def _clipped_column(column_name: str, bounds: tuple[float, float]) -> pl.Expr:
+    lower_bound, upper_bound = bounds
+    column = pl.col(column_name).cast(pl.Float64)
+    return column.fill_nan(upper_bound).clip(lower_bound, upper_bound)
+
+
 class DuckDBBackend(SQLBackend):
     """
     Backend for executing DuckDB queries with differential privacy mechanisms.
@@ -53,6 +59,27 @@ class DuckDBBackend(SQLBackend):
                 hint="Check SQL syntax and referenced tables",
                 cause=e,
             ) from e
+
+    def prepare_inner_df(
+        self,
+        inner_df: DataFrameLike,
+        privacy_unit: str,
+        group_by: list[str],
+    ) -> pl.DataFrame:
+        if not isinstance(inner_df, pl.DataFrame):
+            raise UnsupportedBackendError(
+                "Expected Polars DataFrame",
+                context={"actual_type": type(inner_df).__name__},
+                hint="Provide a polars.DataFrame",
+            )
+        for column in [privacy_unit, *group_by]:
+            if inner_df.schema[column].is_float():
+                raise ExecutionBackendError(
+                    "Privacy unit and GROUP BY columns cannot support NaN or infinity",
+                    context={"column": column, "dtype": str(inner_df.schema[column])},
+                    hint="Use a non-floating-point column for privacy units and groups",
+                )
+        return inner_df.drop_nulls(subset=[privacy_unit])
 
     def contribution_bound(
         self,
@@ -95,6 +122,21 @@ class DuckDBBackend(SQLBackend):
             )
         return df.with_columns(pl.int_range(0, pl.len()).shuffle().alias(column_name))
 
+    def prepare_covar_df(
+        self, df: DataFrameLike, columns: list[str]
+    ) -> tuple[pl.DataFrame, list[str]]:
+        if not isinstance(df, pl.DataFrame):
+            raise UnsupportedBackendError("Expected Polars DataFrame")
+        x, y = columns
+        masked_x = self._unused_column_name(df, "_dpsql_covar_x_")
+        masked_y = self._unused_column_name(df, "_dpsql_covar_y_")
+        valid = pl.col(x).is_not_null() & pl.col(y).is_not_null()
+        result = df.with_columns(
+            pl.when(valid).then(pl.col(x)).alias(masked_x),
+            pl.when(valid).then(pl.col(y)).alias(masked_y),
+        )
+        return result, [masked_x, masked_y]
+
     def apply_aggregation(
         self,
         agg_type: Aggregation,
@@ -117,83 +159,56 @@ class DuckDBBackend(SQLBackend):
                 hint="Convert the input to polars.DataFrame before aggregation",
             )
         # Add a dummy column to group by if group_by is empty
-        df = df.with_columns(pl.lit(1).alias("_no_group_key_"))
+        aggregation_keys = group_by
+        if not aggregation_keys:
+            dummy_column = self._unused_column_name(df, "_no_group_key_")
+            df = df.with_columns(pl.lit(1).alias(dummy_column))
+            aggregation_keys = [dummy_column]
 
         # Polars treats NA values as the key in groups by default
-        grouped = df.group_by(group_by) if group_by else df.group_by("_no_group_key_")
+        grouped = df.group_by(aggregation_keys)
 
-        # Use alias to avoid column name clashes
         if agg_type == Aggregation.COUNT:
-            res = (
-                grouped.len()
-                if column_name[0] == "*"
-                else grouped.agg(
-                    pl.col(column_name[0]).alias(f"_{column_name[0]}_").count()
-                )
+            aggregation = (
+                pl.len() if column_name[0] == "*" else pl.col(column_name[0]).count()
             )
         elif agg_type == Aggregation.COUNT_DISTINCT:
-            res = grouped.agg(
-                pl.col(column_name[0]).alias(f"_{column_name[0]}_").n_unique()
+            aggregation = pl.col(column_name[0]).drop_nulls().n_unique()
+        elif agg_type in (Aggregation.SUM, Aggregation.SQUARED_SUM):
+            column = _clipped_column(
+                column_name[0],
+                safely_get_threshold(clipping_threshold, 0, agg_type.name),
             )
-        elif agg_type == Aggregation.SUM:
-            if clipping_threshold is None:
-                raise AggregationError(
-                    "Missing `clipping_threshold` for `SUM` aggregation",
-                    context={"agg_type": agg_type.name, "column": column_name[0]},
-                    hint="Provide a list of (lower_bound, upper_bound) tuples",
-                )
-            lower_bound, upper_bound = safely_get_threshold(
-                clipping_threshold, 0, agg_type.name
-            )
-            res = grouped.agg(
-                pl.col(column_name[0])
-                .alias(f"_{column_name[0]}_")
-                .clip(lower_bound, upper_bound)
-                .sum()
-            )
-        elif agg_type == Aggregation.SQUARED_SUM:
-            if clipping_threshold is None:
-                raise AggregationError(
-                    "Missing `clipping_threshold` for `SQUARED_SUM` aggregation",
-                    context={"agg_type": agg_type.name, "column": column_name[0]},
-                    hint="Provide a list of (lower_bound, upper_bound) tuples",
-                )
-            lower_bound, upper_bound = safely_get_threshold(
-                clipping_threshold, 0, agg_type.name
-            )
-            res = grouped.agg(
-                (
-                    pl.col(column_name[0])
-                    .alias(f"_{column_name[0]}_")
-                    .clip(lower_bound, upper_bound)
-                    ** 2
-                ).sum()
-            )
+            if agg_type == Aggregation.SQUARED_SUM:
+                column = column**2
+            aggregation = column.sum()
         elif agg_type == Aggregation.PRODUCT_SUM:
-            lower_bound_x, upper_bound_x = safely_get_threshold(
-                clipping_threshold, 0, agg_type.name
-            )
-            lower_bound_y, upper_bound_y = safely_get_threshold(
-                clipping_threshold, 1, agg_type.name
-            )
             # Calculate the product of the first two columns
-            res = grouped.agg(
-                (
-                    pl.col(column_name[0])
-                    .alias(f"_{column_name[0]}_")
-                    .clip(lower_bound_x, upper_bound_x)
-                    * pl.col(column_name[1])
-                    .alias(f"_{column_name[1]}_")
-                    .clip(lower_bound_y, upper_bound_y)
-                ).sum()
-            )
+            aggregation = (
+                _clipped_column(
+                    column_name[0],
+                    safely_get_threshold(clipping_threshold, 0, agg_type.name),
+                )
+                * _clipped_column(
+                    column_name[1],
+                    safely_get_threshold(clipping_threshold, 1, agg_type.name),
+                )
+            ).sum()
         else:
             raise AggregationError(
                 "Unsupported aggregation type",
                 context={"agg_type": getattr(agg_type, "name", str(agg_type))},
                 hint="Use COUNT, COUNT_DISTINCT, SUM, SQUARED_SUM, PRODUCT_SUM",
             )
+        result_column = self._unused_column_name(df, "_dpsql_aggregation_")
+        res = grouped.agg(aggregation.alias(result_column))
         pd_res = res.to_pandas()  # convert Polars DataFrame to Pandas DataFrame
+        for group_column in group_by:
+            if res.schema[group_column].is_integer() and res[group_column].null_count():
+                # Keep nullable integers exact, including in pandas MultiIndex.
+                pd_res[group_column] = res[group_column].to_pandas(
+                    use_pyarrow_extension_array=True
+                )
 
         # Convert to Pandas Series (If not group_by, [:, 0] is a dummy column)
         logger.debug("DuckDB aggregation result converted to pandas Series")
@@ -243,8 +258,16 @@ class DuckDBBackend(SQLBackend):
             # If no group by columns, return the original Table
             return df
         else:
-            ref_df = pl.DataFrame(selected_keys, schema=group_by, orient="row")
-            filtered_df = df.join(ref_df, on=group_by, how="inner")
+            ref_df = pl.DataFrame(
+                [
+                    tuple(None if pd.isna(key) else key for key in keys)
+                    for keys in selected_keys
+                ],
+                schema=df.select(group_by).schema,
+                orient="row",
+                strict=False,
+            )
+            filtered_df = df.join(ref_df, on=group_by, how="inner", nulls_equal=True)
             logger.debug("DuckDB keys filtered")
             return filtered_df
 
