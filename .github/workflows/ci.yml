@@ -1,0 +1,48 @@
+name: CI
+run-name: ${{ github.actor }}
+
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --locked
+
+      - name: Run Ruff (format)
+        run: uv run ruff format --check
+
+      - name: Run Ruff (lint)
+        run: uv run ruff check .
+
+      - name: Run Mypy (typecheck)
+        run: uv run mypy .
+
+      - name: Run test (unit)
+        run: uv run pytest ./tests --ignore=tests/integration/
+
+      - name: Run test (integration)
+        run: uv run pytest ./tests/integration/
