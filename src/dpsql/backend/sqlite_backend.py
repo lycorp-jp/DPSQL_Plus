@@ -14,6 +14,10 @@ from .sql_backend import DataFrameLike, SQLBackend
 logger = logging.getLogger(__name__)
 
 
+def _clip_values(values: pd.Series, lower: float, upper: float) -> pd.Series:
+    return values.astype(float).clip(lower=lower, upper=upper)
+
+
 def _quote_pragma_literal(identifier: str) -> str:
     escaped_identifier = identifier.replace("'", "''")
     return f"'{escaped_identifier}'"
@@ -37,6 +41,18 @@ class SQLiteBackend(SQLBackend):
         logger.debug("SQLite create_inner_df: sql_head=%s", inner_sql[:160])
         return pd.read_sql_query(inner_sql, self.conn)
 
+    def prepare_inner_df(
+        self,
+        inner_df: DataFrameLike,
+        privacy_unit: str,
+        group_by: list[str],
+    ) -> pd.DataFrame:
+        if not isinstance(inner_df, pd.DataFrame):
+            raise UnsupportedBackendError("Expected pandas DataFrame in SQLite backend")
+        # SQLite uses dynamic typing, so privacy unit and GROUP BY column types
+        # are not validated here.
+        return inner_df.dropna(subset=[privacy_unit])
+
     def contribution_bound(
         self,
         inner_df: DataFrameLike,
@@ -57,8 +73,10 @@ class SQLiteBackend(SQLBackend):
             )
 
         # Rank contributions by the shared random priority within each privacy unit.
-        randomized = inner_df.sort_values(by=[privacy_unit, priority_column])
-        grouped = randomized.groupby(privacy_unit, dropna=False, group_keys=False)
+        randomized = inner_df.sort_values(by=priority_column)
+        grouped = randomized.groupby(
+            privacy_unit, dropna=False, group_keys=False, sort=False
+        )
         filtered_df = randomized[grouped.cumcount() < params.contribution_bound]
         filtered_df = filtered_df.reset_index(drop=True)
         logger.debug(
@@ -75,6 +93,23 @@ class SQLiteBackend(SQLBackend):
             )
         rng = np.random.default_rng()
         return df.assign(**{column_name: rng.permutation(len(df))})
+
+    def prepare_covar_df(
+        self, df: DataFrameLike, columns: list[str]
+    ) -> tuple[pd.DataFrame, list[str]]:
+        if not isinstance(df, pd.DataFrame):
+            raise UnsupportedBackendError("Expected pandas DataFrame in SQLite backend")
+        x, y = columns
+        masked_x = self._unused_column_name(df, "_dpsql_covar_x_")
+        masked_y = self._unused_column_name(df, "_dpsql_covar_y_")
+        valid = df[x].notna() & df[y].notna()
+        result = df.assign(
+            **{
+                masked_x: df[x].where(valid),
+                masked_y: df[y].where(valid),
+            }
+        )
+        return result, [masked_x, masked_y]
 
     def apply_aggregation(
         self,
@@ -99,11 +134,12 @@ class SQLiteBackend(SQLBackend):
                 hint="Convert the input to a pandas.DataFrame before "
                 "calling apply_aggregation",
             )
-        df["_no_group_key_"] = 0
-        if len(group_by) > 0:
-            grouped = df.groupby(group_by, dropna=False)
-        else:
-            grouped = df.groupby("_no_group_key_", dropna=False)
+        if not group_by:
+            dummy_column = self._unused_column_name(df, "_no_group_key_")
+            df = df.assign(**{dummy_column: 0})
+            group_by = [dummy_column]
+        keys = [df[column] for column in group_by]
+        grouped = df.groupby(keys, dropna=False, sort=False)
 
         if agg_type == Aggregation.COUNT:
             return (
@@ -113,22 +149,13 @@ class SQLiteBackend(SQLBackend):
             )
         elif agg_type == Aggregation.COUNT_DISTINCT:
             return grouped[column_name[0]].nunique()
-        elif agg_type == Aggregation.SUM:
+        elif agg_type in (Aggregation.SUM, Aggregation.SQUARED_SUM):
             lower_bound, upper_bound = safely_get_threshold(
                 clipping_threshold, 0, agg_type.name
             )
-            # Clip the value to [lower_bound, upper_bound] and sum
-            return grouped[column_name[0]].agg(
-                lambda x: x.clip(lower=lower_bound, upper=upper_bound).sum()
-            )
-        elif agg_type == Aggregation.SQUARED_SUM:
-            lower_bound, upper_bound = safely_get_threshold(
-                clipping_threshold, 0, agg_type.name
-            )
-            # Clip the value to [lower_bound, upper_bound], square it, and sum
-            return grouped[column_name[0]].agg(
-                lambda x: (x.clip(lower=lower_bound, upper=upper_bound) ** 2).sum()
-            )
+            values = _clip_values(df[column_name[0]], lower_bound, upper_bound)
+            if agg_type == Aggregation.SQUARED_SUM:
+                values = values**2
         elif agg_type == Aggregation.PRODUCT_SUM:
             lower_bound_x, upper_bound_x = safely_get_threshold(
                 clipping_threshold, 0, agg_type.name
@@ -136,19 +163,18 @@ class SQLiteBackend(SQLBackend):
             lower_bound_y, upper_bound_y = safely_get_threshold(
                 clipping_threshold, 1, agg_type.name
             )
-            # Clip the values to [lower_bound, upper_bound], multiply them, and sum
-            return grouped.apply(
-                lambda g: (
-                    g[column_name[0]].clip(lower=lower_bound_x, upper=upper_bound_x)
-                    * g[column_name[1]].clip(lower=lower_bound_y, upper=upper_bound_y)
-                ).sum()
-            )
+            values = _clip_values(
+                df[column_name[0]], lower_bound_x, upper_bound_x
+            ) * _clip_values(df[column_name[1]], lower_bound_y, upper_bound_y)
         else:
             raise AggregationError(
                 "Unsupported aggregation type",
                 context={"agg_type": getattr(agg_type, "name", str(agg_type))},
                 hint="Use one of COUNT, COUNT_DISTINCT, SUM, SQUARED_SUM, PRODUCT_SUM",
             )
+
+        # Sum the numeric Series without coercing results back to the input dtype.
+        return values.groupby(keys, dropna=False, sort=False).sum()
 
     def use_database(self, database_name: str | None) -> None:
         logger.info("SQLite use_database called: %s", database_name)

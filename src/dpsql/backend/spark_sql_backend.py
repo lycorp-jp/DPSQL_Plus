@@ -1,11 +1,12 @@
 import logging
 import re
-from typing import cast
 
-from pandas import DataFrame, Series
+from pandas import DataFrame, Series, isna
+from pyarrow import Table
+from pyspark.sql import Column, SparkSession
 from pyspark.sql import DataFrame as SparkDataFrame
-from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
+    coalesce,
     col,
     count,
     countDistinct,
@@ -16,8 +17,11 @@ from pyspark.sql.functions import (
     rand,
     row_number,
     struct,
+    when,
 )
 from pyspark.sql.functions import sum as spark_sum
+from pyspark.sql.pandas.types import from_arrow_schema
+from pyspark.sql.types import DoubleType, FloatType, IntegralType
 from pyspark.sql.window import Window
 
 from ..aggregation import Aggregation
@@ -38,6 +42,16 @@ _SAFE_TEMP_VIEW_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 def _quote_identifier(identifier: str) -> str:
     escaped_identifier = identifier.replace("`", "``")
     return f"`{escaped_identifier}`"
+
+
+def _clipped_column(column_name: str, bounds: tuple[float, float]) -> Column:
+    lower_bound, upper_bound = bounds
+    # Cast before aggregation so integer sums and products cannot wrap around.
+    column = col(_quote_identifier(column_name)).cast(DoubleType())
+    # Spark least/greatest skip NULL, so preserve it explicitly before clipping.
+    return when(
+        column.isNotNull(), least(lit(upper_bound), greatest(lit(lower_bound), column))
+    )
 
 
 class SparkSQLBackend(SQLBackend):
@@ -63,6 +77,29 @@ class SparkSQLBackend(SQLBackend):
                 hint="Check SQL syntax and table existence",
                 cause=e,
             ) from e
+
+    def prepare_inner_df(
+        self,
+        inner_df: DataFrameLike,
+        privacy_unit: str,
+        group_by: list[str],
+    ) -> SparkDataFrame:
+        if not isinstance(inner_df, SparkDataFrame):
+            raise UnsupportedBackendError(
+                "Expected Spark DataFrame",
+                context={"actual_type": type(inner_df).__name__},
+                hint="Provide a pyspark.sql.DataFrame",
+            )
+        for column_name in [privacy_unit, *group_by]:
+            data_type = (
+                inner_df.select(col(_quote_identifier(column_name))).schema[0].dataType
+            )
+            if isinstance(data_type, FloatType | DoubleType):
+                raise ExecutionBackendError(
+                    "Floating-point privacy unit and GROUP BY columns are unsupported",
+                    context={"column": column_name, "dtype": str(data_type)},
+                )
+        return inner_df.filter(col(_quote_identifier(privacy_unit)).isNotNull())
 
     def contribution_bound(
         self,
@@ -104,6 +141,26 @@ class SparkSQLBackend(SQLBackend):
             )
         return df.withColumn(column_name, struct(rand(), monotonically_increasing_id()))
 
+    def prepare_covar_df(
+        self, df: DataFrameLike, columns: list[str]
+    ) -> tuple[SparkDataFrame, list[str]]:
+        if not isinstance(df, SparkDataFrame):
+            raise UnsupportedBackendError(
+                "Expected Spark DataFrame",
+                context={"actual_type": type(df).__name__},
+                hint="Provide a pyspark.sql.DataFrame",
+            )
+        x, y = columns
+        masked_x = self._unused_column_name(df, "_dpsql_covar_x_")
+        masked_y = self._unused_column_name(df, "_dpsql_covar_y_")
+        x_col = col(_quote_identifier(x))
+        y_col = col(_quote_identifier(y))
+        valid = x_col.isNotNull() & y_col.isNotNull()
+        result = df.withColumn(masked_x, when(valid, x_col)).withColumn(
+            masked_y, when(valid, y_col)
+        )
+        return result, [masked_x, masked_y]
+
     def _prepare_aggregation_group(
         self, df: SparkDataFrame, group_by: list[str]
     ) -> tuple[SparkDataFrame, list[str]]:
@@ -115,6 +172,17 @@ class SparkSQLBackend(SQLBackend):
             return df, group_by
         group_column = self._unused_column_name(df, "_dpsql_global_group_")
         return df.withColumn(group_column, lit(1)), [group_column]
+
+    @staticmethod
+    def _aggregation_to_pandas(
+        result: SparkDataFrame, group_by: list[str]
+    ) -> DataFrame:
+        # Preserve nullable integer keys without conversion through floating point.
+        pd_result = DataFrame(result.collect(), columns=result.columns, dtype=object)
+        for name in group_by:
+            if isinstance(result.schema[name].dataType, IntegralType):
+                pd_result[name] = pd_result[name].astype("Int64")
+        return pd_result
 
     def apply_aggregation(
         self,
@@ -143,53 +211,33 @@ class SparkSQLBackend(SQLBackend):
             res = df.groupBy(aggregation_group_by).agg(count(column_name[0]))
         elif agg_type == Aggregation.COUNT_DISTINCT:
             res = df.groupBy(aggregation_group_by).agg(countDistinct(column_name[0]))
-        elif agg_type == Aggregation.SUM:
+        elif agg_type in (Aggregation.SUM, Aggregation.SQUARED_SUM):
             if clipping_threshold is None:
                 raise AggregationError(
-                    "Missing `clipping_threshold` for `SUM` aggregation",
+                    f"Missing `clipping_threshold` for `{agg_type.name}` aggregation",
                     context={"agg_type": agg_type.name, "column": column_name[0]},
                     hint="Provide a list of (lower_bound, upper_bound) tuples",
                 )
-            lower_bound, upper_bound = safely_get_threshold(
-                clipping_threshold, 0, agg_type.name
+            column = _clipped_column(
+                column_name[0],
+                safely_get_threshold(clipping_threshold, 0, agg_type.name),
             )
+            if agg_type == Aggregation.SQUARED_SUM:
+                column = column**2
             res = df.groupBy(aggregation_group_by).agg(
-                spark_sum(
-                    least(lit(upper_bound), greatest(lit(lower_bound), column_name[0]))
-                )
-            )
-        elif agg_type == Aggregation.SQUARED_SUM:
-            if clipping_threshold is None:
-                raise AggregationError(
-                    "Missing `clipping_threshold` for `SQUARED_SUM` aggregation",
-                    context={"agg_type": agg_type.name, "column": column_name[0]},
-                    hint="Provide a list of (lower_bound, upper_bound) tuples",
-                )
-            lower_bound, upper_bound = safely_get_threshold(
-                clipping_threshold, 0, agg_type.name
-            )
-            res = df.groupBy(aggregation_group_by).agg(
-                spark_sum(
-                    least(lit(upper_bound), greatest(lit(lower_bound), column_name[0]))
-                    ** 2
-                )
+                coalesce(spark_sum(column), lit(0.0))
             )
         elif agg_type == Aggregation.PRODUCT_SUM:
-            lower_bound_x, upper_bound_x = safely_get_threshold(
-                clipping_threshold, 0, agg_type.name
+            col1_clipped = _clipped_column(
+                column_name[0],
+                safely_get_threshold(clipping_threshold, 0, agg_type.name),
             )
-            lower_bound_y, upper_bound_y = safely_get_threshold(
-                clipping_threshold, 1, agg_type.name
-            )
-            # Calculate the product of the first two columns
-            col1_clipped = least(
-                lit(upper_bound_x), greatest(lit(lower_bound_x), column_name[0])
-            )
-            col2_clipped = least(
-                lit(upper_bound_y), greatest(lit(lower_bound_y), column_name[1])
+            col2_clipped = _clipped_column(
+                column_name[1],
+                safely_get_threshold(clipping_threshold, 1, agg_type.name),
             )
             res = df.groupBy(aggregation_group_by).agg(
-                spark_sum(col1_clipped * col2_clipped)
+                coalesce(spark_sum(col1_clipped * col2_clipped), lit(0.0))
             )
         else:
             raise AggregationError(
@@ -197,13 +245,13 @@ class SparkSQLBackend(SQLBackend):
                 context={"agg_type": getattr(agg_type, "name", str(agg_type))},
                 hint="Use COUNT, COUNT_DISTINCT, SUM, SQUARED_SUM, PRODUCT_SUM",
             )
-        pd_res = cast(DataFrame, res.toPandas())  # cast DataFramneLike to DataFrame
+        pd_res = self._aggregation_to_pandas(res, group_by)
         logger.debug("Spark aggregation result converted to pandas Series")
 
         if group_by:
-            return pd_res.set_index(group_by).iloc[:, 0]  # convert to Series
+            return pd_res.set_index(group_by).iloc[:, 0].infer_objects()
         else:
-            return pd_res.iloc[:, 1]  # exclude the internal global-group column
+            return pd_res.iloc[:, 1].infer_objects()
 
     def use_database(self, database_name: str | None) -> None:
         logger.info("Spark use_database: %s", database_name)
@@ -273,8 +321,27 @@ class SparkSQLBackend(SQLBackend):
             return df
         else:
             try:
-                ref_df = self.spark.createDataFrame(selected_keys, schema=group_by)
-                filtered_df = df.join(ref_df, on=group_by, how="inner")
+                key_schema = df.select(
+                    *[col(_quote_identifier(name)) for name in group_by]
+                ).schema
+                keys = [
+                    tuple(
+                        (
+                            None
+                            if isna(value)
+                            else (
+                                int(value)
+                                if isinstance(field.dataType, IntegralType)
+                                else value
+                            )
+                        )
+                        for value, field in zip(key, key_schema, strict=True)
+                    )
+                    for key in selected_keys
+                ]
+                ref_df = self.spark.createDataFrame(keys, schema=key_schema)
+                conditions = [df[name].eqNullSafe(ref_df[name]) for name in group_by]
+                filtered_df = df.join(ref_df, on=conditions, how="left_semi")
             except Exception as e:
                 raise ExecutionBackendError(
                     "Failed to filter keys",
@@ -335,7 +402,13 @@ class SparkSQLBackend(SQLBackend):
                 ),
             )
         try:
-            spark_df = self.spark.createDataFrame(df.reset_index() if index else df)
+            # Use explicit types and Python scalars to preserve nullable keys exactly.
+            table = Table.from_pandas(
+                df.reset_index() if index else df, preserve_index=False
+            )
+            spark_df = self.spark.createDataFrame(
+                table.to_pylist(), schema=from_arrow_schema(table.schema)
+            )
             spark_df.createTempView(table_name)
         except Exception as e:  # noqa
             raise ExecutionBackendError(

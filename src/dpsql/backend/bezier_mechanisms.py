@@ -2,7 +2,7 @@ import logging
 
 import numpy as np
 
-from ..errors import AggregationError
+from ..utils import validate_clipping_bounds
 from .secure_sampling import secure_gauss
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def private_avg(
     Returns:
         float: The noisy average.
     """
-    lower_bound, upper_bound = clipping_threshold
+    lower_bound, upper_bound = validate_clipping_bounds(clipping_threshold)
     logger.debug(
         "private_avg: raw_count=%s raw_sum=%s sigma=%s clipping=%s",
         raw_count,
@@ -36,17 +36,6 @@ def private_avg(
         sigma,
         clipping_threshold,
     )
-    if lower_bound >= upper_bound:
-        logger.error(
-            "private_avg invalid clipping: lower=%s upper=%s",
-            lower_bound,
-            upper_bound,
-        )
-        raise AggregationError(
-            "Invalid clipping threshold (lower bound exceeds upper bound)",
-            context={"lower_bound": lower_bound, "upper_bound": upper_bound},
-            hint="Ensure lower_bound < upper_bound",
-        )
     # Apply linear transformation to (sum, count) to get (s1, s2)
     # input x_i \in [lower_bound, upper_bound] is normalized to
     # y_i = (x_i - lower_bound) / (upper_bound - lower_bound) in [0, 1]
@@ -95,7 +84,7 @@ def private_var(
     Returns:
         float: The noisy variance.
     """
-    lower_bound, upper_bound = clipping_threshold
+    lower_bound, upper_bound = validate_clipping_bounds(clipping_threshold)
     logger.debug(
         "private_var: raw_count=%s raw_sum=%s"
         " raw_squared_sum=%s sigma=%s clipping=%s pop=%s",
@@ -106,17 +95,6 @@ def private_var(
         clipping_threshold,
         pop,
     )
-    if lower_bound >= upper_bound:
-        logger.error(
-            "private_var invalid clipping: lower=%s upper=%s",
-            lower_bound,
-            upper_bound,
-        )
-        raise AggregationError(
-            "Invalid clipping threshold (lower bound exceeds upper bound)",
-            context={"lower_bound": lower_bound, "upper_bound": upper_bound},
-            hint="Ensure lower_bound < upper_bound",
-        )
     dx = upper_bound - lower_bound
 
     normalized_raw_sum = (raw_sum - lower_bound * raw_count) / dx  # normalized sum
@@ -214,8 +192,8 @@ def private_covar(
     Returns:
         float: The noisy covariance.
     """
-    lower_bound_x, upper_bound_x = clipping_threshold_x
-    lower_bound_y, upper_bound_y = clipping_threshold_y
+    lower_bound_x, upper_bound_x = validate_clipping_bounds(clipping_threshold_x)
+    lower_bound_y, upper_bound_y = validate_clipping_bounds(clipping_threshold_y)
     logger.debug(
         "private_covar: raw_count=%s raw_sum_x=%s raw_sum_y=%s"
         " raw_sum_xy=%s sigma=%s clip_x=%s clip_y=%s pop=%s",
@@ -228,29 +206,6 @@ def private_covar(
         clipping_threshold_y,
         pop,
     )
-    if lower_bound_x >= upper_bound_x:
-        logger.error(
-            "private_covar invalid clipping x: lower=%s upper=%s",
-            lower_bound_x,
-            upper_bound_x,
-        )
-        raise AggregationError(
-            "Invalid clipping threshold for x (lower bound exceeds upper bound)",
-            context={"lower_bound_x": lower_bound_x, "upper_bound_x": upper_bound_x},
-            hint="Ensure lower_bound_x < upper_bound_x",
-        )
-    if lower_bound_y >= upper_bound_y:
-        logger.error(
-            "private_covar invalid clipping y: lower=%s upper=%s",
-            lower_bound_y,
-            upper_bound_y,
-        )
-        raise AggregationError(
-            "Invalid clipping threshold for y (lower bound exceeds upper bound)",
-            context={"lower_bound_y": lower_bound_y, "upper_bound_y": upper_bound_y},
-            hint="Ensure lower_bound_y < upper_bound_y",
-        )
-
     dx = upper_bound_x - lower_bound_x
     dy = upper_bound_y - lower_bound_y
 

@@ -14,6 +14,62 @@ from pyspark.sql.types import (
 
 from dpsql.aggregation import Aggregation
 
+AGGREGATION_CASE_IDS = [
+    "count_star",
+    "count",
+    "distinct",
+    "sum",
+    "squared_sum",
+    "product_sum",
+]
+
+
+def create_null_aggregation_cases() -> tuple[list[tuple[Any, ...]], list[str]]:
+    rows = [
+        ("mixed", None, 3.0),
+        ("mixed", 2.0, None),
+        ("mixed", 2.0, 4.0),
+        ("all_null", None, None),
+    ]
+    cases = [
+        (Aggregation.COUNT, ["*"], {"mixed": 3, "all_null": 1}),
+        (Aggregation.COUNT, ["x"], {"mixed": 2, "all_null": 0}),
+        (Aggregation.COUNT_DISTINCT, ["x"], {"mixed": 1, "all_null": 0}),
+        (Aggregation.SUM, ["x"], {"mixed": 4, "all_null": 0}),
+        (Aggregation.SQUARED_SUM, ["x"], {"mixed": 8, "all_null": 0}),
+        (Aggregation.PRODUCT_SUM, ["x", "y"], {"mixed": 8, "all_null": 0}),
+    ]
+    return [
+        (agg_type, columns, rows, expected) for agg_type, columns, expected in cases
+    ], AGGREGATION_CASE_IDS
+
+
+def create_nonfinite_aggregation_cases(
+    backend_type: str,
+) -> tuple[list[tuple[Any, ...]], list[str]]:
+    rows = [
+        (value, 2.0)
+        for value in [None, 2.0, 2.0, float("nan"), float("inf"), -float("inf")]
+    ]
+    # SQLite converts NaN to NULL during insertion; DuckDB and Spark preserve it.
+    cases = [
+        (Aggregation.COUNT, ["*"], 6, 6),
+        (Aggregation.COUNT, ["x"], 5, 4),
+        (Aggregation.COUNT_DISTINCT, ["x"], 4, 3),
+        (Aggregation.SUM, ["x"], 15, 10),
+        (Aggregation.SQUARED_SUM, ["x"], 59, 34),
+        (Aggregation.PRODUCT_SUM, ["x", "y"], 30, 20),
+    ]
+    return [
+        (
+            agg_type,
+            columns,
+            rows,
+            sqlite_expected if backend_type == "sqlite" else expected,
+        )
+        for agg_type, columns, expected, sqlite_expected in cases
+    ], AGGREGATION_CASE_IDS
+
 
 def create_test_cases(backend_type: str) -> tuple[list[tuple[Any, ...]], list[str]]:
     """

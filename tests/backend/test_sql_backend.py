@@ -28,6 +28,12 @@ class MockSQLBackend(SQLBackend):
     def create_inner_df(self, inner_sql):
         raise NotImplementedError()
 
+    def prepare_inner_df(self, inner_df, privacy_unit, group_by):
+        return inner_df
+
+    def prepare_covar_df(self, df, columns):
+        raise NotImplementedError()
+
     def contribution_bound(
         self,
         inner_df,

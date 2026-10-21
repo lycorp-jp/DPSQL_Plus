@@ -13,7 +13,7 @@ from .errors import (
     InvalidPrivacyParametersError,
     UnsupportedQueryError,
 )
-from .utils import calibrate_analytic_gaussian_mechanism
+from .utils import calibrate_analytic_gaussian_mechanism, validate_clipping_bounds
 from .validator.utils import get_privacy_definition
 
 if TYPE_CHECKING:
@@ -35,6 +35,7 @@ class DPParams:
         clipping_thresholds (Sequence[list[tuple[float, float]] | None]):
             The list of clipping parameters for input data,
             used to clip the input within the range [L, U] where each tuple is (L, U).
+            Both bounds must be finite and satisfy L < U.
             Each element is either None (for COUNT/COUNT_DISTINCT)
             or a list of clipping thresholds
             for each column in a multi-column aggregation.
@@ -92,6 +93,19 @@ class DPParams:
             "min_frequency", self.min_frequency
         )
 
+        for thresholds in self.clipping_thresholds:
+            if thresholds is not None:
+                for bounds in thresholds:
+                    try:
+                        validate_clipping_bounds(bounds)
+                    except AggregationError as error:
+                        raise InvalidPrivacyParametersError(
+                            str(error),
+                            context=error.context,
+                            hint=error.hint,
+                            cause=error,
+                        ) from error
+
         # Show deprecation warning if sigmas is used
         if self.sigmas is not None:
             warnings.warn(
@@ -104,31 +118,32 @@ class DPParams:
         if self.epsilon is None or self.delta is None:
             logger.debug("Using (sigmas, tau, sigma_for_thresholding) mode")
             # tau must be greater than or equal to min_frequency
-            if self.tau is None or self.tau < self.min_frequency:
+            if self.tau is None or not self.tau >= self.min_frequency:
                 raise InvalidPrivacyParametersError(
                     "Invalid `tau` (must be >= min_frequency)",
                     context={"tau": self.tau, "min_frequency": self.min_frequency},
                     hint="Increase tau or decrease min_frequency",
                 )
-            # sigmas and sigma_for_thresholding must be non-negative
+            # sigmas and sigma_for_thresholding must be finite and non-negative
             if (
                 self.sigmas is None
                 or self.sigma_for_thresholding is None
-                or any(s < 0 for s in self.sigmas)
+                or any(not math.isfinite(s) or s < 0 for s in self.sigmas)
+                or not math.isfinite(self.sigma_for_thresholding)
                 or self.sigma_for_thresholding < 0
             ):
                 raise InvalidPrivacyParametersError(
                     "Invalid noise scales "
-                    "(sigmas and sigma_for_thresholding must be >= 0)",
+                    "(sigmas and sigma_for_thresholding must be finite and >= 0)",
                     context={
                         "sigmas": self.sigmas,
                         "sigma_for_thresholding": self.sigma_for_thresholding,
                     },
-                    hint="Ensure all noise scale parameters are >= 0",
+                    hint="Ensure all noise scale parameters are finite and >= 0",
                 )
         else:
             # epsilon and delta must be positive and delta must be <= 1
-            if self.epsilon <= 0 or self.delta <= 0 or self.delta > 1:
+            if not (self.epsilon > 0 and 0 < self.delta <= 1):
                 raise InvalidPrivacyParametersError(
                     "Invalid (epsilon, delta) "
                     "(epsilon > 0 and 0 < delta <= 1 required)",

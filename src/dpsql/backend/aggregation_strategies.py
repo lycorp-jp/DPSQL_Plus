@@ -359,8 +359,10 @@ class CovarAggregation(AggregationStrategy):
             clipping_threshold,
         )
         agg_type = Aggregation.COVAR_POP if self.pop else Aggregation.COVAR_SAMP
-        agg_column_x = agg_column.columns[0]
-        agg_column_y = agg_column.columns[1]
+        filtered_df, paired_columns = self.backend.prepare_covar_df(
+            filtered_df, agg_column.columns
+        )
+        agg_column_x, agg_column_y = paired_columns
         threshold_x = safely_get_threshold(clipping_threshold, 0, agg_type.name)
         threshold_y = safely_get_threshold(clipping_threshold, 1, agg_type.name)
 

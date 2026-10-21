@@ -149,9 +149,7 @@ class PLDAccountant(Accountant):
             composed = self.pld.compose(pld)
         min_epsilon = self.calculate_min_epsilon(composed)
         logger.debug("PLD check: min_epsilon=%s allowed=%s", min_epsilon, self.epsilon)
-        if self.epsilon < min_epsilon:
-            return False
-        return True
+        return min_epsilon <= self.epsilon
 
     def update_budget(self, agg_funcs: list[Aggregation], params: "DPParams") -> None:
         logger.info("Updating PLDAccountant budget")
@@ -171,7 +169,7 @@ class PLDAccountant(Accountant):
         logger.debug("Per-query: epsilon=%s delta=%s", query_epsilon, query_delta)
         if self.delta >= 1.0:  # infinite budget
             return self.MAX_REMAINING_QUERIES
-        if query_epsilon <= 0 or query_delta <= 0:
+        if not (query_epsilon > 0 and query_delta > 0):
             raise InvalidPrivacyParametersError(
                 "Per-query epsilon and delta must be strictly positive",
                 context={"query_epsilon": query_epsilon, "query_delta": query_delta},

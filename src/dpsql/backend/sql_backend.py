@@ -68,6 +68,7 @@ class SQLBackend(metaclass=ABCMeta):
         # Create intermediate table
         logger.debug("Creating inner_df (sql head): %s", inner_sql[:200])
         inner_df = self.create_inner_df(inner_sql)
+        inner_df = self.prepare_inner_df(inner_df, privacy_unit, group_by)
         logger.debug(
             "inner_df created: type=%s, shape=%s",
             type(inner_df).__name__,
@@ -214,6 +215,16 @@ class SQLBackend(metaclass=ABCMeta):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
+    def prepare_inner_df(
+        self,
+        inner_df: DataFrameLike,
+        privacy_unit: str,
+        group_by: list[str],
+    ) -> DataFrameLike:
+        """Validate key types and remove NULL privacy units before bounding."""
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
     def contribution_bound(
         self,
         inner_df: DataFrameLike,
@@ -242,10 +253,10 @@ class SQLBackend(metaclass=ABCMeta):
 
     @staticmethod
     def _unused_column_name(df: DataFrameLike, prefix: str) -> str:
-        """Return an internal column name that does not collide with input columns."""
-        columns = set(df.columns)
+        """Return an internal column name without case-insensitive collisions."""
+        columns = {name.casefold() for name in df.columns}
         column_name = prefix
-        while column_name in columns:
+        while column_name.casefold() in columns:
             column_name += "_"
         return column_name
 
@@ -255,6 +266,13 @@ class SQLBackend(metaclass=ABCMeta):
         if isinstance(df, pd.DataFrame):
             return df.drop(columns=[column_name])
         return df.drop(column_name)
+
+    @abstractmethod
+    def prepare_covar_df(
+        self, df: DataFrameLike, columns: list[str]
+    ) -> tuple[DataFrameLike, list[str]]:
+        """Mask incomplete pairs without removing rows or changing group keys."""
+        raise NotImplementedError("Subclasses must implement this method")
 
     def create_final_df(
         self,

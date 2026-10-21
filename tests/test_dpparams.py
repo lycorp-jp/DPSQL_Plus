@@ -148,6 +148,49 @@ def test_sigmas_deprecation_warning():
         )
 
 
+@pytest.mark.parametrize("name", ["sigmas", "sigma_for_thresholding"])
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf")])
+def test_noise_scales_reject_nonfinite_values(name, value):
+    parameters = {
+        "contribution_bound": 1,
+        "clipping_thresholds": [None, None],
+        "sigmas": [1.0, 1.0],
+        "tau": 2.0,
+        "sigma_for_thresholding": 1.0,
+    }
+    parameters[name] = [1.0, value] if name == "sigmas" else value
+
+    with pytest.raises(InvalidPrivacyParametersError, match="finite and >= 0"):
+        DPParams(**parameters)
+
+
+@pytest.mark.parametrize("name", ["epsilon", "delta"])
+def test_budget_parameters_reject_nan(name):
+    parameters = {
+        "contribution_bound": 1,
+        "clipping_thresholds": [None],
+        "epsilon": 1.0,
+        "delta": 1e-5,
+    }
+    parameters[name] = float("nan")
+
+    with pytest.raises(
+        InvalidPrivacyParametersError, match=r"Invalid \(epsilon, delta\)"
+    ):
+        DPParams(**parameters)
+
+
+def test_tau_rejects_nan():
+    with pytest.raises(InvalidPrivacyParametersError, match="Invalid `tau`"):
+        DPParams(
+            contribution_bound=1,
+            clipping_thresholds=[None],
+            sigmas=[1.0],
+            tau=float("nan"),
+            sigma_for_thresholding=1.0,
+        )
+
+
 def test_mixed_privacy_parameter_modes_are_rejected():
     with pytest.raises(
         InvalidPrivacyParametersError,

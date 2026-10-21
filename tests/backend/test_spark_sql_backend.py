@@ -4,12 +4,19 @@ import pandas as pd
 import pytest
 from pyspark.sql import SparkSession
 from pyspark.sql.types import (
+    DoubleType,
+    FloatType,
     IntegerType,
+    LongType,
     StringType,
     StructField,
     StructType,
 )
-from utils import create_test_cases
+from utils import (
+    create_nonfinite_aggregation_cases,
+    create_null_aggregation_cases,
+    create_test_cases,
+)
 
 from dpsql.aggregation import Aggregation, AggregationColumn
 from dpsql.backend import SparkSQLBackend
@@ -32,6 +39,10 @@ def spark():
 
 # Get test cases and IDs from shared utility
 TEST_CASES, TEST_IDS = create_test_cases("spark")
+NULL_AGGREGATION_CASES, NULL_AGGREGATION_IDS = create_null_aggregation_cases()
+NONFINITE_AGGREGATION_CASES, NONFINITE_AGGREGATION_IDS = (
+    create_nonfinite_aggregation_cases("spark")
+)
 
 
 @pytest.mark.parametrize(
@@ -68,6 +79,109 @@ def test_apply_aggregation(
         check_names=False,
         check_dtype=False,
     )
+
+
+def test_prepare_inner_df_drops_null_privacy_units(spark):
+    backend = SparkSQLBackend(spark)
+    df = spark.createDataFrame(
+        [(None, "A", 100), ("u1", None, 2), ("u2", "A", 3)],
+        "uid string, g string, x int",
+    )
+
+    result = backend.prepare_inner_df(df, "uid", ["g"])
+
+    assert {(row.uid, row.g, row.x) for row in result.collect()} == {
+        ("u1", None, 2),
+        ("u2", "A", 3),
+    }
+
+
+@pytest.mark.parametrize("key_column", ["uid", "g"])
+@pytest.mark.parametrize("key_type", [FloatType(), DoubleType()])
+@pytest.mark.parametrize(
+    "values",
+    [[1.0], [float("nan")], [float("inf")], [-float("inf")], [None], []],
+    ids=["finite", "nan", "positive_inf", "negative_inf", "all_null", "empty"],
+)
+def test_prepare_inner_df_rejects_floating_point_keys(
+    spark, key_column, key_type, values
+):
+    backend = SparkSQLBackend(spark)
+    schema = StructType(
+        [
+            StructField("uid", key_type if key_column == "uid" else StringType()),
+            StructField("g", key_type if key_column == "g" else StringType()),
+        ]
+    )
+    rows = [(value, "A") if key_column == "uid" else ("u1", value) for value in values]
+    df = spark.createDataFrame(rows, schema)
+
+    with pytest.raises(ExecutionBackendError, match="Floating-point"):
+        backend.prepare_inner_df(df, "uid", ["g"])
+
+
+@pytest.mark.parametrize(
+    "agg_type,columns,rows,expected", NULL_AGGREGATION_CASES, ids=NULL_AGGREGATION_IDS
+)
+def test_apply_aggregation_with_null_values(spark, agg_type, columns, rows, expected):
+    backend = SparkSQLBackend(spark)
+    inner_df = spark.createDataFrame(rows, "category string, x double, y double")
+
+    result = backend.apply_aggregation(
+        agg_type, columns, inner_df, ["category"], [(1.0, 5.0)] * len(columns)
+    )
+
+    assert result.to_dict() == expected
+
+
+@pytest.mark.parametrize(
+    "agg_type,columns,rows,expected",
+    NONFINITE_AGGREGATION_CASES,
+    ids=NONFINITE_AGGREGATION_IDS,
+)
+def test_apply_aggregation_with_nonfinite_values(
+    spark, agg_type, columns, rows, expected
+):
+    backend = SparkSQLBackend(spark)
+    inner_df = spark.createDataFrame(rows, "x double, y double")
+
+    result = backend.apply_aggregation(
+        agg_type, columns, inner_df, [], [(1.0, 5.0)] * len(columns)
+    )
+
+    assert result.tolist() == [expected]
+
+
+@pytest.mark.parametrize(
+    "agg_type,expected", [(Aggregation.COVAR_POP, 1.0), (Aggregation.COVAR_SAMP, 2.0)]
+)
+def test_covar_uses_complete_pairs(spark, agg_type, expected):
+    backend = SparkSQLBackend(spark)
+    df = spark.createDataFrame(
+        [
+            ("mixed", 1.0, 2.0),
+            ("mixed", 3.0, 4.0),
+            ("mixed", None, 100.0),
+            ("mixed", 100.0, None),
+            ("all_null", None, None),
+        ],
+        "g string, x double, y double",
+    )
+    masked, columns = backend.prepare_covar_df(df, ["x", "y"])
+    all_null = masked.filter("g = 'all_null'").select(*columns).collect()
+    assert len(all_null) == 1
+    assert tuple(all_null[0]) == (None, None)
+    assert df.count() == masked.count()
+
+    result = backend.create_final_df(
+        df.filter("g = 'mixed'"),
+        [AggregationColumn(agg_type, ["x", "y"], alias="covar")],
+        ["g"],
+        [0],
+        [[(0.0, 10.0), (0.0, 10.0)]],
+    )
+
+    assert result.loc["mixed", "covar"] == pytest.approx(expected)
 
 
 @pytest.mark.parametrize(
@@ -255,6 +369,56 @@ def test_execute_sql_suppresses_global_aggregation_below_min_frequency(spark, mo
     assert result.empty
 
 
+def _execute_null_group_query(spark, group_kind, all_null=False):
+    backend = SparkSQLBackend(spark)
+    large_key = 2**60 + 1
+    if group_kind == "integer":
+        schema = "uid string, g long"
+        group_by = ["g"]
+        keys = [(None,), (None,), (large_key,), (large_key,)]
+    elif group_kind == "string":
+        schema = "uid string, g string"
+        group_by = ["g"]
+        keys = [(None,), (None,), ("A",), ("A",)]
+    else:
+        schema = "uid string, g long, h string"
+        group_by = ["g", "h"]
+        keys = [(None, "A"), (None, "A"), (large_key, None), (large_key, None)]
+    if all_null:
+        keys = [tuple(None for _ in group_by)] * 4
+    df = spark.createDataFrame([(f"u{i}", *key) for i, key in enumerate(keys)], schema)
+    df.createOrReplaceTempView("null_group_source")
+    result = backend.execute_sql(
+        privacy_unit="uid",
+        params=DPParams(
+            contribution_bound=1,
+            min_frequency=1,
+            sigma_for_thresholding=0,
+            tau=1,
+            sigmas=[0],
+            clipping_thresholds=[None],
+        ),
+        inner_sql="SELECT * FROM null_group_source",
+        agg_columns=[AggregationColumn(Aggregation.COUNT, ["*"], alias="n")],
+        group_by_columns=group_by,
+        ordering_terms=[],
+    )
+    return backend, df, group_by, keys, result
+
+
+@pytest.mark.parametrize("group_kind", ["integer", "string", "multi"])
+def test_execute_sql_preserves_null_group_keys(spark, group_kind):
+    backend, df, group_by, keys, result = _execute_null_group_query(spark, group_kind)
+    result_keys = [key if isinstance(key, tuple) else (key,) for key in result.index]
+    normalized = [
+        tuple(None if pd.isna(value) else value for value in key) for key in result_keys
+    ]
+
+    assert set(normalized) == set(keys)
+    assert result["n"].tolist() == [2.0, 2.0]
+    assert backend.filter_by_selected_keys(df, group_by, result_keys).count() == 4  # type: ignore
+
+
 def test_get_column_name(spark):
     backend = SparkSQLBackend(spark)
     spark.sql("DROP DATABASE IF EXISTS db1 CASCADE")
@@ -323,6 +487,54 @@ def test_create_temporary_table(spark):
         "attribute",
         "value",
     ]
+
+
+@pytest.mark.parametrize("arrow_enabled", [False, True])
+@pytest.mark.parametrize("all_null", [False, True])
+@pytest.mark.parametrize("group_kind", ["integer", "string", "multi"])
+def test_create_temporary_table_preserves_null_group_keys(
+    spark, arrow_enabled, all_null, group_kind
+):
+    spark.conf.set(
+        "spark.sql.execution.arrow.pyspark.enabled", str(arrow_enabled).lower()
+    )
+    backend, _, group_by, keys, result = _execute_null_group_query(
+        spark, group_kind, all_null
+    )
+
+    backend.create_temporary_table(result, "saved_null_groups")
+    saved = spark.table("saved_null_groups")
+    rows = saved.collect()
+
+    assert {tuple(row[name] for name in group_by) for row in rows} == set(keys)
+    assert sum(row.n for row in rows) == 4.0
+    if group_kind != "string":
+        assert isinstance(saved.schema["g"].dataType, LongType)
+
+
+@pytest.mark.parametrize(
+    "key_dtype,spark_type", [("Int64", LongType), ("string", StringType)]
+)
+@pytest.mark.parametrize("multi", [False, True])
+def test_create_temporary_table_preserves_all_null_typed_index(
+    spark, key_dtype, spark_type, multi
+):
+    keys = pd.Index(pd.array([pd.NA], dtype=key_dtype), name="g")
+    if multi:
+        keys = pd.MultiIndex.from_arrays(
+            [keys, pd.array([pd.NA], dtype="string")], names=["g", "h"]
+        )
+    result = pd.DataFrame({"n": [1.0]}, index=keys)
+    backend = SparkSQLBackend(spark)
+
+    backend.create_temporary_table(result, "all_null_typed_index")
+    saved = spark.table("all_null_typed_index")
+
+    assert isinstance(saved.schema["g"].dataType, spark_type)
+    assert saved.collect()[0].g is None
+    if multi:
+        assert isinstance(saved.schema["h"].dataType, StringType)
+        assert saved.collect()[0].h is None
 
 
 def test_create_temporary_table_rejects_invalid_name(spark):
